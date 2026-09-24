@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سرّ الدار الموصلية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Reem+Kufi:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+
+    <!-- شاشة البداية -->
+    <section id="screen-start" class="screen active">
+      <div id="start-art"></div>
+      <div class="start-panel">
+        <div class="title-orn">✦ ❖ ✦</div>
+        <h1 class="game-title">سرّ الدار الموصلية</h1>
+        <p class="subtitle">لعبة هروب من بيتٍ موصليٍّ قديم</p>
+        <div class="start-buttons">
+          <button id="btn-new" class="btn btn-gold">ابدأ</button>
+          <button id="btn-continue" class="btn btn-wood">أكمل</button>
+        </div>
+        <p id="save-info" class="save-info"></p>
+      </div>
+    </section>
+
+    <!-- اللعبة -->
+    <section id="game" class="screen">
+      <div id="scene"></div>
+      <header id="hud">
+        <div class="hud-right">
+          <span id="hud-room" class="hud-room"></span>
+        </div>
+        <div class="hud-center">
+          <span class="hud-stat" title="الوقت"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><b id="hud-time">00:00</b></span>
+          <span class="hud-stat" title="التلميحات المستخدمة"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><b id="hud-hints">0</b></span>
+        </div>
+        <div class="hud-left">
+          <button id="btn-hint" class="btn-hud" title="تلميح">تلميح</button>
+          <button id="btn-mute" class="btn-hud icon" title="كتم الصوت"></button>
+          <button id="btn-menu" class="btn-hud icon" title="القائمة الرئيسية"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+        </div>
+      </header>
+      <div id="msg"></div>
+      <div id="closeup" class="overlay">
+        <div class="cu-frame">
+          <div class="cu-title"></div>
+          <div class="cu-body"></div>
+          <button class="cu-close" title="إغلاق">✕</button>
+        </div>
+      </div>
+      <footer id="inv">
+        <div class="inv-label">الأغراض</div>
+        <div id="inv-slots"></div>
+        <div id="inv-info">
+          <div id="inv-name"></div>
+          <button id="btn-examine" class="btn-small">افحص</button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- شاشة النهاية -->
+    <section id="screen-end" class="screen">
+      <div class="end-panel">
+        <div class="title-orn">✦ ❖ ✦</div>
+        <h2 id="end-title"></h2>
+        <div id="end-story"></div>
+        <div id="end-stats"></div>
+        <div class="start-buttons">
+          <button id="btn-end-menu" class="btn btn-gold">القائمة الرئيسية</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="dlg" class="overlay">
+      <div class="dlg-box">
+        <div class="dlg-body"></div>
+        <div class="dlg-buttons"></div>
+      </div>
+    </div>
+    <div id="drag-ghost"></div>
+    <div id="cursor-item"></div>
+    <div id="fade"></div>
+  </div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/art.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/rooms/r1-entrance.js"></script>
+<script src="js/rooms/r2-mirrors.js"></script>
+<script src="js/rooms/r3-library.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
