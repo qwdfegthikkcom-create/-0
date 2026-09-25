@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B0F1A">
+  <title>مسيرة نجم</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="overlay"></div>
+  <div id="toast"></div>
+  <canvas id="fx"></canvas>
+
+  <!-- الأساس -->
+  <script src="js/core/util.js"></script>
+  <script src="js/core/rng.js"></script>
+  <script src="js/core/events.js"></script>
+  <script src="js/data/balance.js"></script>
+  <script src="js/core/calendar.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/save.js"></script>
+  <!-- البيانات -->
+  <script src="js/data/nations.js"></script>
+  <script src="js/data/names.js"></script>
+  <script src="js/data/leagues.js"></script>
+  <script src="js/data/texts-ar.js"></script>
+  <!-- منطق اللعبة (بدون واجهة) -->
+  <script src="js/sim/player.js"></script>
+  <script src="js/sim/competitions.js"></script>
+  <script src="js/sim/selection.js"></script>
+  <script src="js/sim/world-gen.js"></script>
+  <script src="js/sim/match-sim.js"></script>
+  <script src="js/sim/growth.js"></script>
+  <script src="js/sim/regens.js"></script>
+  <script src="js/sim/game-loop.js"></script>
+  <script src="js/game/moment-core.js"></script>
+  <!-- الرسم والألعاب -->
+  <script src="js/game/canvas-kit.js"></script>
+  <script src="js/game/moment-view.js"></script>
+  <script src="js/game/training-games.js"></script>
+  <!-- الواجهة -->
+  <script src="js/ui/components.js"></script>
+  <script src="js/ui/sound.js"></script>
+  <script src="js/ui/router.js"></script>
+  <script src="js/ui/screens/menu.js"></script>
+  <script src="js/ui/screens/create.js"></script>
+  <script src="js/ui/screens/home.js"></script>
+  <script src="js/ui/screens/week.js"></script>
+  <script src="js/ui/screens/match.js"></script>
+  <script src="js/ui/screens/club.js"></script>
+  <script src="js/ui/screens/competitions.js"></script>
+  <script src="js/ui/screens/profile.js"></script>
+  <script src="js/ui/screens/settings.js"></script>
+  <script src="js/ui/app.js"></script>
+</body>
+</html>
