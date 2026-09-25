@@ -60,8 +60,10 @@
       const club = state.clubs[clubId];
       let ids = club.squad.slice();
       const u = state.user;
-      if (u && FC.Game && FC.Game.userTeam(state) === clubId) ids.push(0);
-      if (!all && FC.Status) ids = ids.filter((id) => FC.Status.available(state, FC.getP(state, id)));
+      // المنتخب: القائمة تشمل لاعبك (0) إن استُدعي
+      if (club.nt) ids = ids.filter((id) => FC.getP(state, id));
+      else if (u && FC.Game && FC.Game.userTeam(state) === clubId) ids.push(0);
+      if (!all && FC.Status) ids = ids.filter((id) => FC.Status.available(state, FC.getP(state, id), club.nt));
       return ids;
     },
 
@@ -85,7 +87,8 @@
     },
 
     // اختيار التشكيلة: {form, xi:[{pid, slot}], bench:[pid], out:[pid]}
-    pick(state, clubId, rng, big) {
+    // rot: مداورة أكبر (الأدوار الأولى من الكأس)
+    pick(state, clubId, rng, big, rot) {
       const club = state.clubs[clubId];
       const form = club.form;
       const slots = FORMATIONS[form];
@@ -95,7 +98,8 @@
       const order = slots.map((s, i) => i).sort((a, b) => SLOT_PRIORITY.indexOf(slots[a]) - SLOT_PRIORITY.indexOf(slots[b]));
       // نحفظ عشوائية المداورة لكل لاعب حتى تكون متسقة بين المراكز
       const noise = {};
-      if (rng) pool.forEach((p) => (noise[p.id] = rng.normal(0, FC.BAL.select.rotationNoise * (big ? FC.BAL.coach.bigGameNoise : 1))));
+      const nm = FC.BAL.select.rotationNoise * (big ? FC.BAL.coach.bigGameNoise : 1) * (rot && !big ? FC.BAL.cups.rotNoise : 1);
+      if (rng) pool.forEach((p) => (noise[p.id] = rng.normal(0, nm)));
       for (const si of order) {
         const slot = slots[si];
         let best = null;

@@ -66,15 +66,26 @@
             .join('') +
           '</div><p class="muted small">' + (FC.Game.userTeam(st) === teamId ? 'دورك: ' + UI.roleChip(FC.Select.roleOf(pick, 0)) + ' · ' : '') + 'الاحتياط: ' + pick.bench.map((id) => esc(FC.getP(st, id).ln || FC.Player.displayName(FC.getP(st, id)))).join('، ') + '</p></div>';
       } else if (tab === 'fix') {
-        const list = FC.Comp.clubFixtures(st, teamId);
+        // الدوري + الكؤوس والبطولات القارية مرتبة حسب التاريخ
+        const list = FC.Comp.clubFixtures(st, teamId).map((f) => Object.assign({ d: 0, tag: 'الجولة ' + (f.r + 1) }, f));
+        if (st.fx) {
+          FC.Cups.teamFixtures(st, teamId).forEach((fx) => {
+            const home = fx.h === teamId;
+            const c = st.comps[fx.c];
+            const pens = fx.ph >= 0 ? (home ? fx.ph > fx.pa : fx.pa > fx.ph) : null;
+            list.push({ week: fx.w, d: fx.d, home, opp: home ? fx.a : fx.h, gf: fx.hg < 0 ? -1 : home ? fx.hg : fx.ag, ga: fx.hg < 0 ? -1 : home ? fx.ag : fx.hg, tag: c.short + ' · ' + c.stages[fx.s].n, cup: true, pens, n: fx.n });
+          });
+        }
+        list.sort((a, b) => a.week - b.week || a.d - b.d);
         body +=
           '<div class="panel"><h3>مباريات الموسم</h3><div class="fixtures">' +
           list
             .map((f) => {
               const o = st.clubs[f.opp];
               const played = f.gf >= 0;
-              const r = played ? (f.gf > f.ga ? 'W' : f.gf < f.ga ? 'L' : 'D') : null;
-              return '<div class="fx-row' + (f.week === st.week ? ' now' : '') + '"><span class="fx-d">' + esc(UI.weekDate(st, f.week)) + '</span><span class="fx-h">' + (f.home ? 'أرضنا' : 'خارج') + '</span><span class="fx-o">' + UI.badge(o, 18) + ' ' + esc(o.name) + '</span>' + (played ? UI.score(f.home ? f.gf : f.ga, f.home ? f.ga : f.gf) + UI.formChip(r) : '<span class="muted">الجولة ' + (f.r + 1) + '</span>') + '</div>';
+              let r = played ? (f.gf > f.ga ? 'W' : f.gf < f.ga ? 'L' : 'D') : null;
+              if (r === 'D' && f.pens != null) r = f.pens ? 'W' : 'L';
+              return '<div class="fx-row' + (f.week === st.week ? ' now' : '') + (f.cup ? ' cup' : '') + '"><span class="fx-d">' + esc(UI.fxDate(st, f.week, f.d)) + (f.cup ? '<small>' + esc(f.tag) + '</small>' : '') + '</span><span class="fx-h">' + (f.n ? 'محايد' : f.home ? 'أرضنا' : 'خارج') + '</span><span class="fx-o">' + UI.badge(o, 18) + ' ' + esc(o.name) + '</span>' + (played ? UI.score(f.home ? f.gf : f.ga, f.home ? f.ga : f.gf) + UI.formChip(r) : '<span class="muted">' + esc(f.cup ? 'كأس' : f.tag) + '</span>') + '</div>';
             })
             .join('') +
           '</div></div>';

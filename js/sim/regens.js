@@ -26,8 +26,8 @@
       let born = 0;
       for (const id in state.clubs) {
         const club = state.clubs[id];
-        if (club.youth) continue;
-        const L = state.leagues[club.lg];
+        if (club.youth || club.nt) continue;
+        const L = FC.Cups ? FC.Cups.leagueFor(state, club) : state.leagues[club.lg];
         club.squad = club.squad.filter((pid) => {
           const p = state.players[pid];
           if (R.retires(p, club, rng)) {

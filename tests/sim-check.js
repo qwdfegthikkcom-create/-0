@@ -31,8 +31,27 @@ const pct = (v) => (v * 100).toFixed(1) + '%';
 console.log('\n=== محاكاة ' + SEASONS + ' موسماً لكل الدوريات ===');
 const stats = { matches: 0, goals: 0, home: 0, draw: 0, away: 0, yellow: 0, red: 0, starterRatings: [], ratings8: 0, ratings10: 0, byLeague: {} };
 const origFinish = FC.Match.finish;
+// إحصائيات الكؤوس والبطولات (المرحلة 4)
+const cupStats = { n: 0, goals: 0, ko: 0, et: 0, pens: 0, nat: 0, natGoals: 0, awayLeft: 0 };
 FC.Match.finish = function (state, m) {
   const out = origFinish.call(this, state, m);
+  // الكؤوس والمنتخبات تُحسب منفصلة (أرقام الدوري معايرة على الدوري وحده)
+  if (m.ref && m.ref.fid != null) {
+    const g = m.sides[0].goals + m.sides[1].goals;
+    if (m.ref.nat) {
+      cupStats.nat++;
+      cupStats.natGoals += g;
+    } else {
+      cupStats.n++;
+      cupStats.goals += g;
+    }
+    if (m.ref.ko) {
+      cupStats.ko++;
+      if (m.et) cupStats.et++;
+      if (m.pens) cupStats.pens++;
+    }
+    return out;
+  }
   const lg = m.ref ? m.ref.lg : '?';
   if (lg === 'YTH') return out;
   const hg = m.sides[0].goals;
@@ -134,6 +153,8 @@ for (let s = 0; s < SEASONS; s++) {
       const u = state.user;
       careerLines.push({ season: state.season, age: u.age, team: u.team, club: state.clubs[FC.Game.userTeam(state)].name, ap: u.season.ap, st: u.season.st, g: u.season.g, a: u.season.a, avg: u.season.ap ? u.season.rs / u.season.ap : 0, ovr: FC.Player.ovr(u) });
     }
+    // لا لاعب «غائب مع المنتخب» في بداية الموسم
+    if (state.week === 0) for (const id in state.players) if (state.players[id].away) cupStats.awayLeft++;
     const t0 = process.hrtime.bigint();
     FC.Game.autoWeek(state);
     const ms = Number(process.hrtime.bigint() - t0) / 1e6;
@@ -163,6 +184,32 @@ check('البطاقات الحمراء في المباراة', stats.red / stats
 if (peakStrikers.length) check('مهاجم موهوب في ذروته (أهداف/موسم كل البطولات)', U.avg(peakStrikers), 20, 35, f1, 'عينة ' + peakStrikers.length);
 else skip('مهاجم موهوب في ذروته', 'لا توجد عينة');
 check('مهاجم عادي (أهداف/موسم)', U.avg(avgStrikers), 8, 15, f1, 'عينة ' + avgStrikers.length);
+// ====================== الكؤوس والبطولات القارية والمنتخبات ======================
+{
+  const H = state.history.seasons.filter((h) => h.cups);
+  const all = (id) => H.map((h) => h.cups[id]).filter(Boolean);
+  const doneDom = H.filter((h) => FC.DATA.leagueOrder.every((lg) => h.cups['CUP_' + lg])).length;
+  check('كل الكؤوس المحلية اكتملت ببطل كل موسم', doneDom / Math.max(1, H.length), 1, 1, pct, H.length + ' موسماً');
+  check('البطولتان القاريتان اكتملتا كل موسم', H.filter((h) => h.cups.CL_EU && h.cups.CL_AS).length / Math.max(1, H.length), 1, 1, pct);
+  const big5 = all('CL_EU').filter((r) => { const c = state.clubs[r.win]; return c && STRONG.indexOf(c.lg) >= 0; }).length;
+  check('أبطال النخبة الأوروبية من الدوريات الخمس الكبرى', big5 / Math.max(1, all('CL_EU').length), 0.7, 1, pct, 'عينة ' + all('CL_EU').length);
+  const gulf = all('CL_AS').filter((r) => { const c = state.clubs[r.win]; return c && (c.lg === 'KSA' || c.lg === 'IRQ'); }).length;
+  check('أبطال النخبة الآسيوية من السعودية أو العراق', gulf / Math.max(1, all('CL_AS').length), 0.25, 1, pct, 'الباقي من الأندية المولّدة (اليابان، كوريا، قطر...)');
+  const wc = all('WC');
+  const wcSeasons = H.filter((h) => h.season % 4 === FC.BAL.nat.cycle.WC).length;
+  check('كأس العالم أقيمت في كل دورة', wc.length, wcSeasons, wcSeasons, (x) => String(x));
+  const topNat = FC.DATA.nationOrder.slice().sort((a, b) => FC.DATA.nations[b].str - FC.DATA.nations[a].str).slice(0, 12).map((k) => FC.Nat.idOf(k));
+  if (wc.length) check('أبطال كأس العالم من أقوى 12 منتخباً', wc.filter((r) => topNat.indexOf(r.win) >= 0).length / wc.length, 0.6, 1, pct, wc.map((r) => r.winName.replace('منتخب ', '')).join('، '));
+  ['EURO', 'COPA', 'ASIA', 'AFCON'].forEach((k) => {
+    const n = H.filter((h) => h.season % 4 === FC.BAL.nat.cycle[k]).length;
+    check('بطولة ' + FC.DATA.natComps[k].name + ' أقيمت في موعدها', all(k).length, n, n, (x) => String(x));
+  });
+  check('متوسط الأهداف في الكؤوس والقارية', cupStats.goals / Math.max(1, cupStats.n), 2.3, 3.3, f2, 'عينة ' + cupStats.n);
+  check('متوسط الأهداف في مباريات المنتخبات', cupStats.natGoals / Math.max(1, cupStats.nat), 2.0, 3.4, f2, 'عينة ' + cupStats.nat);
+  check('مباريات الحسم التي امتدت لأشواط إضافية', cupStats.et / Math.max(1, cupStats.ko), 0.12, 0.35, pct, 'عينة ' + cupStats.ko);
+  check('مباريات الحسم بركلات الترجيح', cupStats.pens / Math.max(1, cupStats.ko), 0.06, 0.25, pct);
+  check('لاعبون عالقون «مع المنتخب» في بداية الموسم', cupStats.awayLeft, 0, 0, (x) => String(x));
+}
 check('أبطأ أسبوع محاكاة (ms)', maxWeekMs, 0, 300, f1, 'المتوسط ' + f1(sumWeekMs / weeks) + 'ms');
 const outfieldRet = retireAges.filter((r) => !r.gk).map((r) => r.age);
 const gkRet = retireAges.filter((r) => r.gk).map((r) => r.age);

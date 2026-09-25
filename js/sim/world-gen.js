@@ -64,6 +64,7 @@
         sAp: 0, sSt: 0, sMn: 0, sG: 0, sA: 0, sRs: 0, sYc: 0, sRc: 0,
         cAp: 0, cG: 0, cA: 0,
         inj: 0, ban: 0, yk: 0, // أسابيع الإصابة، مباريات الإيقاف، الصفراء المتراكمة
+        iC: 0, iG: 0, away: 0, // المباريات والأهداف الدولية، الغياب مع المنتخب في بطولة
         ce: (state.season || FC.BAL.cal.startYear) + rng.int(0, 4), // نهاية العقد (موسم)
       };
       if (p.pot < p.ovr) p.pot = Math.ceil(p.ovr);
@@ -213,6 +214,8 @@
       W.makeYouthLeague(state, rng, lgId);
       state.wk = FC.Game.newWeekState();
       FC.Comp.newSeason(state);
+      // الكؤوس والبطولات القارية والمنتخبات (مع الأندية المولّدة للدول بلا دوري)
+      if (FC.Cups) FC.Cups.newSeason(state);
       return state;
     },
 

@@ -61,7 +61,7 @@
   for (const g in TRAIN) TRAIN[g].attrs.forEach((k) => (TRAIN_OF[k] = g));
 
   // حقول لاعب الذكاء الاصطناعي بالترتيب (للحفظ المضغوط)
-  const AI_FIELDS = ['id', 'fn', 'ln', 'nat', 'age', 'pos', 'ovr', 'pot', 'club', 'num', 'ht', 'ft', 'fm', 'fit', 'sAp', 'sSt', 'sMn', 'sG', 'sA', 'sRs', 'sYc', 'sRc', 'cAp', 'cG', 'cA', 'inj', 'ban', 'yk', 'ce'];
+  const AI_FIELDS = ['id', 'fn', 'ln', 'nat', 'age', 'pos', 'ovr', 'pot', 'club', 'num', 'ht', 'ft', 'fm', 'fit', 'sAp', 'sSt', 'sMn', 'sG', 'sA', 'sRs', 'sYc', 'sRc', 'cAp', 'cG', 'cA', 'inj', 'ban', 'yk', 'ce', 'iC', 'iG', 'away'];
 
   // أثر الطول والوزن على السمات
   function bodyAdj(key, ht, wt) {
@@ -230,6 +230,9 @@
         sg: 0, // مكسب التقييم هذا الموسم
         season: P.emptySeason(),
         career: { ap: 0, g: 0, a: 0, mn: 0, motm: 0 },
+        intl: { caps: 0, g: 0, a: 0, mn: 0, rs: 0, calls: 0, capt: false, debut: null, tourn: [] }, // مسيرتك الدولية
+        trophies: [], // خزانة الألقاب
+        away: false, // مع المنتخب في بطولة (يغيب عن ناديه)
         history: [],
         log: [],
         seasonStartAttrs: U.clone(attrs),
@@ -247,7 +250,8 @@
 
     // إحصائيات موسم فارغة للاعبك
     emptySeason() {
-      return { ap: 0, st: 0, mn: 0, g: 0, a: 0, rs: 0, yc: 0, ycCount: 0, rc: 0, sh: 0, sot: 0, kp: 0, pas: 0, pasOk: 0, drb: 0, tk: 0, int: 0, sv: 0, cs: 0, motm: 0 };
+      // lg: إحصائيات الدوري وحده (قوائم الهدافين والجوائز) — الباقي لكل مسابقات النادي
+      return { ap: 0, st: 0, mn: 0, g: 0, a: 0, rs: 0, yc: 0, ycCount: 0, rc: 0, sh: 0, sot: 0, kp: 0, pas: 0, pasOk: 0, drb: 0, tk: 0, int: 0, sv: 0, cs: 0, motm: 0, lg: { ap: 0, g: 0, a: 0, rs: 0 } };
     },
 
     // إضافة حقول ناقصة عند تحميل حفظ قديم
@@ -260,6 +264,9 @@
         if (p.ban == null) p.ban = 0;
         if (p.yk == null) p.yk = 0;
         if (p.ce == null) p.ce = (state.season || 2026) + 2;
+        if (p.iC == null) p.iC = 0;
+        if (p.iG == null) p.iG = 0;
+        if (p.away == null) p.away = 0;
       }
       const u = state.user;
       if (u) {
@@ -280,7 +287,13 @@
           if (u.team === 'Y') FC.Transfer.youthContract(state);
           else FC.Transfer.firstPro(state);
         }
+        if (u.season && !u.season.lg) u.season.lg = { ap: u.season.ap, g: u.season.g, a: u.season.a, rs: u.season.rs };
+        if (!u.intl && FC.Nat) u.intl = FC.Nat.emptyIntl();
+        if (!u.trophies) u.trophies = [];
+        if (u.away == null) u.away = false;
       }
+      // المرحلة 4: الأندية المولّدة والمنتخبات والكؤوس لحفظ قديم (تبدأ المسابقات من الموسم الحالي)
+      if (FC.Cups && !state.comps) FC.Cups.upgrade(state);
     },
   });
 })(globalThis);

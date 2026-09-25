@@ -149,6 +149,8 @@
   UI.badge = function (club, size) {
     if (!club) return '';
     const s = size || 28;
+    // المنتخب: العلم بدل الشعار
+    if (club.nt) return '<span class="nt-badge" style="height:' + s + 'px">' + UI.flag(club.nat, Math.round(s * 0.62)) + '</span>';
     const letter = esc((club.short || club.name).replace(/^ش\.\s*/, '').trim().charAt(0));
     const txt = U.luma(club.c1) > 0.6 ? '#111' : '#fff';
     return (
@@ -198,7 +200,8 @@
     return '<span class="rt ' + c + (big ? ' big' : '') + '">' + r.toFixed(1) + '</span>';
   };
   // النتيجة داخل عنصر ltr حتى لا تنقلب
-  UI.score = (a, b) => '<span class="score" dir="ltr">' + a + ' - ' + b + '</span>';
+  // النتيجة بترتيب الواجهة العربية: هدف المضيف (على اليمين) أولاً من اليمين
+  UI.score = (a, b) => '<span class="score" dir="rtl">' + a + ' - ' + b + '</span>';
   // حرف نتيجة: ف / ت / خ
   UI.formChip = (r) => '<span class="fc fc-' + r + '">' + { W: 'ف', D: 'ت', L: 'خ' }[r] + '</span>';
   UI.roleChip = (role) => {
@@ -325,4 +328,81 @@
   UI.pname = (p) => (p.id === 0 ? FC.Player.displayName(p) : p.fn + ' ' + p.ln);
   UI.date = (st) => FC.Calendar.fmt(FC.Calendar.weekDate(st.season, st.week));
   UI.weekDate = (st, w) => FC.Calendar.fmtShort(FC.Calendar.weekDate(st.season, w));
+  // تاريخ مباراة مع اليوم (0 = السبت، 1 = منتصف الأسبوع/الأربعاء)
+  UI.fxDate = (st, w, d) => FC.Calendar.fmtShort(FC.Calendar.weekDate(st.season, w, d ? 4 : 0));
+
+  // ================= أدوات البطولات (المرحلة 4) =================
+  // آخر نتائج أي فريق في كل المسابقات (الأحدث أخيراً): ['W','D','L']
+  UI.teamForm = function (st, id, n) {
+    const out = [];
+    const c = st.clubs[id];
+    if (c && st.leagues[c.lg]) FC.Comp.clubFixtures(st, id).forEach((f) => f.gf >= 0 && out.push({ w: f.week, d: 0, r: f.gf > f.ga ? 'W' : f.gf < f.ga ? 'L' : 'D' }));
+    (st.fx || []).forEach((fx) => {
+      if (fx.hg < 0 || (fx.h !== id && fx.a !== id)) return;
+      const gf = fx.h === id ? fx.hg : fx.ag;
+      const ga = fx.h === id ? fx.ag : fx.hg;
+      let r = gf > ga ? 'W' : gf < ga ? 'L' : 'D';
+      if (r === 'D' && fx.ph >= 0) r = (fx.h === id ? fx.ph > fx.pa : fx.pa > fx.ph) ? 'W' : 'L';
+      out.push({ w: fx.w, d: fx.d, r });
+    });
+    out.sort((a, b) => a.w - b.w || a.d - b.d);
+    return out.slice(-(n || 5)).map((x) => x.r);
+  };
+
+  // نتيجة مباراة كأس (مع الأشواط الإضافية والترجيح)
+  UI.fxScore = function (fx) {
+    if (fx.hg < 0) return '<span class="score muted">—</span>';
+    return '<span class="score" dir="rtl">' + fx.hg + ' - ' + fx.ag + '</span>' + (fx.ph >= 0 ? '<small class="pens" dir="rtl">(ت ' + fx.ph + ' - ' + fx.pa + ')</small>' : fx.et ? '<small class="pens">ت.إ</small>' : '');
+  };
+
+  // سطر مباراة: المضيف النتيجة الضيف
+  UI.fxRow = function (st, fx, meIds) {
+    const H = st.clubs[fx.h];
+    const A = st.clubs[fx.a];
+    const me = meIds && (meIds.indexOf(fx.h) >= 0 || meIds.indexOf(fx.a) >= 0);
+    return '<div class="res-row' + (me ? ' me' : '') + '"><span class="rt-h">' + esc(H.short) + ' ' + UI.badge(H, 18) + '</span>' + UI.fxScore(fx) + '<span class="rt-a">' + UI.badge(A, 18) + ' ' + esc(A.short) + '</span></div>';
+  };
+
+  // جدول مجموعة مصغّر
+  UI.groupTable = function (st, gr, title, meIds, adv) {
+    const rows = FC.Cups.groupTable(st, gr);
+    return (
+      '<div class="grp"><h4>' + esc(title) + '</h4><table class="tbl compact"><thead><tr><th>#</th><th class="l">الفريق</th><th>ل</th><th>ف</th><th>ت</th><th>خ</th><th>±</th><th>ن</th></tr></thead><tbody>' +
+      rows
+        .map((r, i) => {
+          const c = st.clubs[r.id];
+          const cls = (meIds && meIds.indexOf(r.id) >= 0 ? 'me ' : '') + (i < (adv || 2) ? 'z-top' : '');
+          return '<tr class="' + cls + '"><td>' + (i + 1) + '</td><td class="l">' + UI.badge(c, 16) + ' <span class="cn">' + esc(c.short) + '</span></td><td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.d + '</td><td>' + r.l + '</td><td dir="ltr">' + (r.gd > 0 ? '+' : '') + r.gd + '</td><td><b>' + r.pts + '</b></td></tr>';
+        })
+        .join('') +
+      '</tbody></table></div>'
+    );
+  };
+
+  // مربع مواجهة في شجرة خروج المغلوب
+  UI.tieBox = function (st, stage, tie, meIds) {
+    if (!tie) return '<div class="tie empty"><div class="tr"><span>—</span></div><div class="tr"><span>—</span></div></div>';
+    const fs = tie.f.map((id) => st.fx[id]);
+    const played = fs.length && fs.every((f) => f.hg >= 0);
+    const goals = (team) => {
+      let g = 0;
+      let any = false;
+      fs.forEach((f) => {
+        if (f.hg < 0) return;
+        any = true;
+        g += f.h === team ? f.hg : f.ag;
+      });
+      return any ? g : '';
+    };
+    const last = fs[fs.length - 1];
+    const pens = last && last.ph >= 0 ? (team) => '<small dir="ltr">(' + (last.h === team ? last.ph : last.pa) + ')</small>' : () => '';
+    const row = (team) => {
+      if (team == null) return '<div class="tr"><span class="muted">تأهل مباشرة</span></div>';
+      const c = st.clubs[team];
+      const cls = (tie.w === team ? 'win ' : tie.w != null ? 'lose ' : '') + (meIds && meIds.indexOf(team) >= 0 ? 'me' : '');
+      return '<div class="tr ' + cls + '">' + UI.badge(c, 16) + '<span class="tn">' + esc(c.short) + '</span><b>' + goals(team) + '</b>' + pens(team) + '</div>';
+    };
+    const dates = fs.map((f) => UI.fxDate(st, f.w, f.d)).join(' / ');
+    return '<div class="tie' + (played ? ' done' : '') + '">' + row(tie.a) + row(tie.b) + '<div class="td">' + (stage.legs === 2 ? 'ذهاب وإياب · ' : '') + esc(dates) + '</div></div>';
+  };
 })(globalThis);

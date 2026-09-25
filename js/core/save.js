@@ -11,7 +11,7 @@
   const FC = G.FC = G.FC || {};
 
   const APP = 'masirat-najm';
-  const VERSION = 3;
+  const VERSION = 4;
   const DB_NAME = 'masirat-najm';
   const STORE = 'kv';
   const LS_PREFIX = 'mn_';
@@ -83,6 +83,11 @@
       o.offers = o.offers || [];
       o.tlog = o.tlog || [];
       o.v = 3;
+      return o;
+    },
+    // الإصدار 4 (المرحلة 4): الكؤوس والبطولات القارية والمنتخبات (تُنشأ عند التحميل في fillDefaults)
+    3: (o) => {
+      o.v = 4;
       return o;
     },
   };

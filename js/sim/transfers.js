@@ -77,6 +77,10 @@
       if (u.age <= 21) v *= 1 + Math.max(0, u.hid.pot - ovr) / 40;
       v *= u.agent ? 0.85 + u.agent.stars * 0.1 : 0.75;
       if (u.listed) v *= 1.5;
+      // المنتخب والبطولات القارية تلفت الأنظار (مهم للموهبة العراقية)
+      if (u.intl && u.intl.caps) v *= 1 + Math.min(u.intl.caps, 20) * B.intlVis;
+      const contMin = (u.log || []).filter((l) => l.k === 'cup' && l.c && l.c.indexOf('CL_') === 0 && l.mn > 0).length;
+      if (contMin) v *= 1 + Math.min(contMin, 8) * B.contVis;
       if (FC.Fame && u.fame != null) v *= 1 + u.fame / 200;
       return v;
     },
@@ -212,7 +216,7 @@
       const w = [];
       for (const id in state.clubs) {
         const c = state.clubs[id];
-        if (c.youth || c.id === cur || c.id === u.club) continue;
+        if (c.youth || c.nt || c.gen || c.id === cur || c.id === u.club) continue;
         let lo = ovr - 5;
         let hi = ovr + 7;
         if (type === 'loan') {
@@ -529,7 +533,7 @@
     aiWindow(state, rng, winter) {
       const B = BT();
       const BW = FC.BAL.world;
-      const clubs = Object.values(state.clubs).filter((c) => !c.youth);
+      const clubs = Object.values(state.clubs).filter((c) => !c.youth && !c.nt);
       let moves = 0;
       clubs.sort((a, b) => (b.budget || 0) - (a.budget || 0));
       const all = Object.values(state.players);
@@ -572,7 +576,7 @@
       });
       // الأندية التي نقصت: مواهب جديدة
       clubs.forEach((c) => {
-        const L = state.leagues[c.lg];
+        const L = FC.Cups ? FC.Cups.leagueFor(state, c) : state.leagues[c.lg];
         while (c.squad.length < BW.squadMin) FC.Regens.newTalent(state, rng, c, L);
       });
       return moves;

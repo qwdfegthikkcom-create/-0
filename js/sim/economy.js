@@ -57,7 +57,7 @@
       const B = BE();
       for (const id in state.clubs) {
         const c = state.clubs[id];
-        if (c.youth) continue;
+        if (c.youth || c.nt) continue;
         const base = B.budgetLeague[c.lg] || 5e6;
         c.budget = Math.round(base * Math.pow(c.rep / 85, 2.5) * rng.float(0.7, 1.3));
       }

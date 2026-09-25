@@ -47,7 +47,7 @@
           '<canvas class="fm-c"></canvas>' +
           '<div class="fm-top">' +
           '<div class="fm-sb"><span class="fm-t"><i style="background:' + esc(T0.club.c1) + '"></i>' + esc(T0.club.short) + '</span>' +
-          '<b class="fm-sc" dir="ltr"><span class="s0">0</span> - <span class="s1">0</span></b>' +
+          '<b class="fm-sc" dir="rtl"><span class="s0">0</span> - <span class="s1">0</span></b>' +
           '<span class="fm-t">' + esc(T1.club.short) + '<i style="background:' + esc(T1.club.c1) + '"></i></span>' +
           '<span class="fm-clk" dir="ltr">0\'</span></div>' +
           '<div class="fm-tb"><button class="fm-ib" data-a="cam" aria-label="الكاميرا">🎥</button><button class="fm-ib" data-a="pause" aria-label="إيقاف مؤقت">⏸</button></div>' +
@@ -317,7 +317,7 @@
           );
         }
         function scoreHtml() {
-          return '<div class="fm-big"><span>' + esc(T0.club.short) + '</span><b dir="ltr">' + T0.score + ' - ' + T1.score + '</b><span>' + esc(T1.club.short) + '</span></div>';
+          return '<div class="fm-big"><span>' + esc(T0.club.short) + '</span><b dir="rtl">' + T0.score + ' - ' + T1.score + '</b><span>' + esc(T1.club.short) + '</span></div>';
         }
         function myHtml() {
           const u = fm.user;
@@ -443,7 +443,10 @@
           // نهاية المباراة
           if (fm.over && ov.dataset.kind !== 'ft') {
             if (FC.Sound) FC.Sound.whistle(3);
-            overlay('ft', '<h3>نهاية المباراة</h3>' + scoreHtml() + myHtml() + statsHtml() + '<div class="fm-acts"><button class="btn gold" data-a="ft">ملخص المباراة</button></div>');
+            // تعادل في مباراة إقصائية: تستمر إلى الأشواط الإضافية
+            const ag = m.agg || [0, 0];
+            const extra = m.ko && T0.score + ag[0] === T1.score + ag[1];
+            overlay('ft', '<h3>' + (extra ? 'التعادل بعد 90 دقيقة!' : 'نهاية المباراة') + '</h3>' + scoreHtml() + myHtml() + (extra ? '<p class="muted">مباراة خروج المغلوب: أشواط إضافية (30 دقيقة) ثم ركلات ترجيح إن استمر التعادل.</p>' : statsHtml()) + '<div class="fm-acts"><button class="btn gold" data-a="ft">' + (extra ? 'إلى الأشواط الإضافية' : 'ملخص المباراة') + '</button></div>');
           }
         }
 

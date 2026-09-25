@@ -79,8 +79,10 @@
       const BM = B().match;
       // المباريات الكبيرة (ديربي أو قمة): المدرب يلعب بالأفضل ومداورة أقل
       const big = opts.big != null ? opts.big : M.isBig(state, home, away, ref);
-      const pickH = opts.pickH || FC.Select.pick(state, home, rng, big);
-      const pickA = opts.pickA || FC.Select.pick(state, away, rng, big);
+      // مداورة الأدوار الأولى من الكأس المحلية
+      const rot = !!(ref && ref.rot);
+      const pickH = opts.pickH || FC.Select.pick(state, home, rng, big, rot);
+      const pickA = opts.pickA || FC.Select.pick(state, away, rng, big, rot);
       const mkSide = (clubId, pick, isHome) => {
         const xi = pick.xi.map((x) => rec(state, x.pid, x.slot, true));
         const bench = pick.bench.map((pid) => rec(state, pid, null, false));
@@ -106,6 +108,13 @@
         done: false,
         derby: state.clubs[home].rival === away,
         big,
+        // الكؤوس: هل يجب حسم فائز؟ نتيجة الذهاب، ملعب محايد، الأشواط الإضافية والترجيح
+        ko: !!(ref && ref.ko),
+        agg: (ref && ref.agg) || null,
+        neutral: !!(ref && ref.n),
+        len: 90,
+        et: false,
+        pens: null,
         user: null,
         mode: opts.mode || 'auto',
       };
@@ -118,7 +127,10 @@
       M.updateRates(m);
       // لاعبك في هذه المباراة؟
       const uTeam = FC.Game.userTeam(state);
-      const si = uTeam === home ? 0 : uTeam === away ? 1 : -1;
+      let si = uTeam === home ? 0 : uTeam === away ? 1 : -1;
+      // مباريات المنتخبات: لاعبك فقط إن كان ضمن القائمة
+      if (ref && ref.nat) si = ref.userSide != null ? ref.userSide : -1;
+      if (opts.userSide != null) si = opts.userSide;
       if (si >= 0) M.setupUser(state, m, si, rng);
       return m;
     },
@@ -128,6 +140,7 @@
       const ch = state.clubs[home];
       if (!ch) return false;
       if (ch.rival === away) return true;
+      if (ref && ref.fid != null) return !!ref.big;
       if (!ref || !state.leagues[ref.lg] || ref.r < 10) return false;
       const t = FC.Comp.table(state, ref.lg);
       const top = t.slice(0, 4).map((x) => x.id);
@@ -141,9 +154,12 @@
       A.str = strength(A);
       H.str = strength(H);
       const f = (x, y) => Math.exp((BM.strengthK * (x.att - y.def + BM.midK * (x.mid - y.mid))) / 10);
-      A.rate = BM.chancesBase * f(A.str, H.str) * BM.homeMult * A.day;
-      H.rate = BM.chancesBase * f(H.str, A.str) * BM.awayMult * H.day;
-      A.poss = U.clamp(50 + (A.str.mid - H.str.mid) * BM.possMid + BM.possHome, 30, 70);
+      // الملعب المحايد (النهائيات والبطولات الدولية): لا أفضلية للأرض
+      const hm = m.neutral ? (BM.homeMult + BM.awayMult) / 2 : BM.homeMult;
+      const am = m.neutral ? hm : BM.awayMult;
+      A.rate = BM.chancesBase * f(A.str, H.str) * hm * A.day;
+      H.rate = BM.chancesBase * f(H.str, A.str) * am * H.day;
+      A.poss = U.clamp(50 + (A.str.mid - H.str.mid) * BM.possMid + (m.neutral ? 0 : BM.possHome), 30, 70);
       H.poss = 100 - A.poss;
     },
 
@@ -243,6 +259,9 @@
 
     // تسمية الوقت: 45+2 أو 90+3
     clock(m) {
+      if (m.phase === 'pens' || (m.phase === 'ft' && m.pens)) return 'ترجيح';
+      if (m.phase === 'ft' && m.et) return '120';
+      if (m.phase === 'et1' || m.phase === 'eth' || m.phase === 'et2') return String(Math.min(120, m.min));
       if (m.phase === 'h1' || m.phase === 'ht') return m.min > 45 ? '45+' + (m.min - 45) : String(m.min);
       return m.min > 90 ? '90+' + (m.min - 90) : String(m.min);
     },
@@ -272,21 +291,153 @@
         return ev;
       }
       if (m.phase === 'h2' && m.min >= 90 + m.st2) {
-        m.phase = 'ft';
-        m.done = true;
-        const v = vars();
-        if (S0.goals === S1.goals) M.say(m, ev, rng, 'ft', 'ftDraw', v, 2);
-        else {
-          const w = S0.goals > S1.goals ? S0 : S1;
-          const l = w === S0 ? S1 : S0;
-          M.say(m, ev, rng, 'ft', 'ftWin', { t: w.club.short, o: l.club.short, sc: v.sc }, 2);
+        // خروج المغلوب بالتعادل: أشواط إضافية
+        if (M.needExtra(m)) {
+          m.phase = 'etb';
+          M.say(m, ev, rng, 'ht', 'etStart', vars(), 2);
+          return ev;
         }
+        return M.fullTime(m, ev, rng, vars);
+      }
+      if (m.phase === 'etb') {
+        m.phase = 'et1';
+        m.min = 90;
+        m.len = 120;
+        m.et = true;
+        const u = m.user;
+        if (u && u.state === 'on' && u.x) {
+          const r = B().moments.count[u.x.role];
+          u.target = u.used + (r[0] + r[1]) / 6;
+        }
+        return ev;
+      }
+      if (m.phase === 'et1' && m.min >= 105) {
+        m.phase = 'eth';
+        M.say(m, ev, rng, 'ht', 'etHalf', vars(), 2);
+        return ev;
+      }
+      if (m.phase === 'eth') {
+        m.phase = 'et2';
+        M.say(m, ev, rng, 'info', 'etSecond', vars(), 1);
+        return ev;
+      }
+      if (m.phase === 'et2' && m.min >= 120) {
+        if (M.needExtra(m)) {
+          M.startPens(state, m, ev, rng, vars);
+          return ev;
+        }
+        return M.fullTime(m, ev, rng, vars);
+      }
+      if (m.phase === 'pens') {
+        M.penKick(state, m, ev, rng);
         return ev;
       }
       m.min++;
       M.minute(state, m, ev, rng);
       if (m.min === 45 && m.phase === 'h1') M.say(m, ev, rng, 'info', 'stoppage', { n: m.st1 }, 1);
       if (m.min === 90 && m.phase === 'h2') M.say(m, ev, rng, 'info', 'stoppage', { n: m.st2 }, 1);
+      return ev;
+    },
+
+    // صافرة النهاية (مع نتيجة مجموع المباراتين إن وُجدت)
+    fullTime(m, ev, rng, vars) {
+      const S0 = m.sides[0];
+      const S1 = m.sides[1];
+      m.phase = 'ft';
+      m.done = true;
+      const v = vars();
+      if (S0.goals === S1.goals) M.say(m, ev, rng, 'ft', 'ftDraw', v, 2);
+      else {
+        const w = S0.goals > S1.goals ? S0 : S1;
+        const l = w === S0 ? S1 : S0;
+        M.say(m, ev, rng, 'ft', 'ftWin', { t: w.club.short, o: l.club.short, sc: v.sc }, 2);
+      }
+      if (m.agg) {
+        const a0 = S0.goals + m.agg[0];
+        const a1 = S1.goals + m.agg[1];
+        const w = a0 > a1 ? S0 : S1;
+        M.say(m, ev, rng, 'ft', 'aggWin', { t: w.club.short, sc: Math.max(a0, a1) + '-' + Math.min(a0, a1) }, 2);
+      }
+      return ev;
+    },
+
+    // هل تحتاج المباراة أشواطاً إضافية أو ترجيحاً؟ (تعادل في مباراة يجب حسمها)
+    needExtra(m) {
+      if (!m.ko) return false;
+      const a = m.agg || [0, 0];
+      return m.sides[0].goals + a[0] === m.sides[1].goals + a[1];
+    },
+
+    // ============ ركلات الترجيح ============
+    penSkill(x) {
+      return attr(x.p, 'pen') + attr(x.p, 'cmp') * 0.3 - (x.role === 'GK' ? 40 : 0);
+    },
+    startPens(state, m, ev, rng, vars) {
+      m.phase = 'pens';
+      const tk = m.sides.map((S) => {
+        const list = S.xi.filter((x) => x.on).sort((a, b) => M.penSkill(b) - M.penSkill(a));
+        // لاعبك يتقدم ضمن الخمسة الأوائل إن كان في الملعب
+        const ui = list.findIndex((x) => x.pid === 0);
+        if (ui > 4) list.splice(4, 0, list.splice(ui, 1)[0]);
+        return list;
+      });
+      m.pens = { s: [0, 0], n: [0, 0], seq: [], tk };
+      M.say(m, ev, rng, 'ht', 'pensStart', vars(), 3);
+    },
+    penProb(m, si, taker) {
+      const P = FC.BAL.cups.pens;
+      const O = m.sides[1 - si];
+      const gk = O.xi.find((x) => x.on && x.role === 'GK');
+      const gv = gk ? gkVal(gk.p) : 40;
+      let p = P.base + (attr(taker.p, 'pen') * 0.75 + attr(taker.p, 'cmp') * 0.25 - 70) * P.penK - (gv - 70) * P.gkK;
+      if (m.pens.n[si] > 5) p -= P.pressure;
+      return U.clamp(p, P.min, P.max);
+    },
+    penKick(state, m, ev, rng) {
+      const P = m.pens;
+      const si = P.seq.length % 2;
+      const list = P.tk[si];
+      if (!list.length) return M.penResult(state, m, si, null, false, ev, rng);
+      const taker = list[P.n[si] % list.length];
+      const u = m.user;
+      // ركلتك: لحظة تلعبها بنفسك
+      if (taker.pid === 0 && u && u.momentsOn && u.si === si) {
+        M.makePending(state, m, 'shot', 'pen', si, taker, null, rng);
+        m.pending.so = true;
+        m.pending.clock = 'ترجيح';
+        return;
+      }
+      M.penResult(state, m, si, taker, rng.chance(M.penProb(m, si, taker)), ev, rng);
+    },
+    penResult(state, m, si, taker, scored, ev, rng) {
+      const P = m.pens;
+      P.n[si]++;
+      if (scored) P.s[si]++;
+      P.seq.push([si, taker ? taker.pid : -1, scored ? 1 : 0]);
+      if (m.live && taker) {
+        const S = m.sides[si];
+        const nm = taker.pid === 0 ? FC.Player.displayName(taker.p) : taker.p.ln;
+        const key = taker.pid === 0 ? (scored ? 'soUserGoal' : 'soUserMiss') : scored ? 'soGoal' : 'soMiss';
+        const e = { min: 'ترجيح', t: scored ? 'pens' : 'pmiss', si, txt: FC.TXT.com(rng, key, { p: nm, t: S.club.short, sc: P.s[0] + '-' + P.s[1] }), imp: 2, so: P.s.slice(), pid: taker.pid };
+        ev.push(e);
+        m.events.push(e);
+      }
+      const n0 = P.n[0];
+      const n1 = P.n[1];
+      const s0 = P.s[0];
+      const s1 = P.s[1];
+      let done = false;
+      if (n0 <= 5 && n1 <= 5) {
+        if (s0 > s1 + (5 - n1) || s1 > s0 + (5 - n0)) done = true;
+        else if (n0 === 5 && n1 === 5 && s0 !== s1) done = true;
+      } else if (n0 === n1 && s0 !== s1) done = true;
+      if (n0 > 30) done = true; // حماية
+      if (done) {
+        m.phase = 'ft';
+        m.done = true;
+        const w = s0 >= s1 ? m.sides[0] : m.sides[1];
+        M.say(m, ev, rng, 'ft', 'pensWin', { t: w.club.short, sc: Math.max(s0, s1) + '-' + Math.min(s0, s1) }, 3);
+      }
       return ev;
     },
 
@@ -342,6 +493,7 @@
       const S = m.sides[si];
       const O = m.sides[1 - si];
       let p = S.rate / m.perMin;
+      if (m.len > 90) p *= FC.BAL.cups.etRate;
       if (m.min >= BM.stateMinute) {
         const d = S.goals - O.goals;
         if (d > 0) p *= BM.leadMult;
@@ -718,7 +870,7 @@
       const u = m.user;
       if (!u || u.state !== 'on' || !u.momentsOn || m.mode === 'mixed') return;
       if (u.used >= B().moments.maxPerMatch) return;
-      const end = 90 + (m.phase === 'h2' ? m.st2 : 0);
+      const end = m.len > 90 ? 120 : 90 + (m.phase === 'h2' ? m.st2 : 0);
       const remain = Math.max(1, end - m.min);
       const need = u.target - u.used - u.natRate * remain;
       if (need <= 0) return;
@@ -774,6 +926,8 @@
       m.pending = null;
       const rng = FC.rngOf(state);
       const ev = [];
+      // ركلتك في ركلات الترجيح
+      if (pd.so) return M.penResult(state, m, pd.si, pd._shooter, res.outcome === 'goal', ev, rng);
       const u = m.user;
       const BR = B().rating;
       const S = m.sides[pd.si];
@@ -911,8 +1065,9 @@
 
     minutes(m, x) {
       if (x.in < 0) return 0;
-      const end = x.out >= 0 ? x.out : m.phase === 'ft' || m.done ? 90 + m.st2 : m.min;
-      return Math.max(1, Math.min(90, end) - Math.min(90, x.in));
+      const cap = m.len || 90;
+      const end = x.out >= 0 ? x.out : m.phase === 'ft' || m.done ? (cap > 90 ? cap : 90 + m.st2) : m.min;
+      return Math.max(1, Math.min(cap, end) - Math.min(cap, x.in));
     },
 
     // تقييم لاعب ذكاء اصطناعي
@@ -940,7 +1095,9 @@
     // إنهاء المباراة: التقييمات، الإحصائيات، الترتيب
     finish(state, m) {
       const rng = FC.rngOf(state);
-      const out = { ratings: [], motm: null, score: [m.sides[0].goals, m.sides[1].goals] };
+      const out = { ratings: [], motm: null, score: [m.sides[0].goals, m.sides[1].goals], et: m.et, pens: m.pens ? m.pens.s.slice() : null };
+      // نوع المباراة: دوري / كأس أو قارية / منتخبات (إحصائيات الدوري منفصلة لقوائم الهدافين)
+      const kind = !m.ref || m.ref.fid == null ? 'lg' : m.ref.nat ? 'nat' : 'cup';
       let best = null;
       m.sides.forEach((S, si) => {
         const O = m.sides[1 - si];
@@ -953,17 +1110,24 @@
           out.ratings.push({ si, pid: x.pid, r });
           if (x.pid !== 0) {
             const p = x.p;
-            p.sAp++;
-            if (x.start) p.sSt++;
-            p.sMn += M.minutes(m, x);
-            p.sG += x.g;
-            p.sA += x.a;
-            p.sRs += r;
-            p.sYc += x.yc;
-            p.sRc += x.rc;
-            p.cAp++;
-            p.cG += x.g;
-            p.cA += x.a;
+            if (kind === 'lg') {
+              p.sAp++;
+              if (x.start) p.sSt++;
+              p.sMn += M.minutes(m, x);
+              p.sG += x.g;
+              p.sA += x.a;
+              p.sRs += r;
+              p.sYc += x.yc;
+              p.sRc += x.rc;
+            } else if (kind === 'cup') p.sMn += M.minutes(m, x);
+            if (kind === 'nat') {
+              p.iC = (p.iC || 0) + 1;
+              p.iG = (p.iG || 0) + x.g;
+            } else {
+              p.cAp++;
+              p.cG += x.g;
+              p.cA += x.a;
+            }
             p.fm = U.round1(p.fm * 0.7 + r * 0.3);
           }
         });
@@ -971,14 +1135,15 @@
       out.motm = best ? best.pid : null;
       m.motm = best;
       if (FC.Status) FC.Status.afterMatchAI(state, m, rng);
-      if (m.ref) FC.Comp.record(state, m.ref.lg, m.ref.r, m.ref.i, m.sides[0].goals, m.sides[1].goals);
+      if (m.ref && m.ref.fid != null) FC.Cups.record(state, m);
+      else if (m.ref) FC.Comp.record(state, m.ref.lg, m.ref.r, m.ref.i, m.sides[0].goals, m.sides[1].goals);
       return out;
     },
 
     // تشغيل المباراة حتى النهاية (مع حسم لحظاتك تلقائياً)
     run(state, m) {
       let guard = 0;
-      while (!m.done && guard++ < 400) {
+      while (!m.done && guard++ < 600) {
         if (m.pending) M.autoResolve(state, m);
         else M.step(state, m);
       }
@@ -988,6 +1153,13 @@
     quick(state, ref) {
       const f = FC.Comp.fixture(state, ref);
       const m = M.create(state, f[0], f[1], ref, { live: false, mode: 'auto' });
+      M.run(state, m);
+      return { m, res: M.finish(state, m) };
+    },
+
+    // محاكاة سريعة لمباراة كأس أو بطولة
+    quickFx(state, fx) {
+      const m = M.create(state, fx.h, fx.a, FC.Cups.refOf(state, fx), { live: false, mode: 'auto' });
       M.run(state, m);
       return { m, res: M.finish(state, m) };
     },

@@ -180,9 +180,11 @@
     },
 
     // هل اللاعب متاح للمباراة؟
-    available(state, p) {
-      if (p.id === 0) return !p.inj && !(p.ban > 0) && !p.freeAgent;
-      return !(p.inj > 0) && !(p.ban > 0);
+    // nt: للمنتخب (الإيقافات المحلية وغياب البطولة لا تنطبق)
+    available(state, p, nt) {
+      if (nt) return p.id === 0 ? !p.inj : !(p.inj > 0);
+      if (p.id === 0) return !p.inj && !(p.ban > 0) && !p.freeAgent && !p.away;
+      return !(p.inj > 0) && !(p.ban > 0) && !p.away;
     },
 
     // ================= البطاقات والإيقافات =================
@@ -191,22 +193,28 @@
     afterMatchAI(state, m, rng) {
       if (!m.ref) return;
       const B = BI();
+      // مباريات المنتخبات لا تؤثر على إيقافات الأندية، والصفراء المتراكمة للدوري فقط
+      const nat = !!m.ref.nat;
+      const lgm = m.ref.fid == null;
       m.sides.forEach((S) => {
         const club = state.clubs[S.id];
         if (!club) return;
         const inMatch = new Set(S.all.map((x) => x.pid));
-        club.squad.forEach((pid) => {
-          const p = state.players[pid];
-          if (p && p.ban > 0 && !inMatch.has(pid)) p.ban--;
-        });
+        if (!nat) {
+          club.squad.forEach((pid) => {
+            const p = state.players[pid];
+            if (p && p.ban > 0 && !inMatch.has(pid)) p.ban--;
+          });
+        }
         S.all.forEach((x) => {
           if (x.pid === 0 || x.in < 0) return;
           const p = x.p;
           // اللياقة بعد المباراة
           const mins = FC.Match.minutes(m, x);
           p.fit = Math.max(B.aiFitMin, (p.fit == null ? 100 : p.fit) - (mins / 90) * B.aiFitDrain);
-          const ban = St.banFor(rng, x, (p.yk || 0));
-          if (x.yc === 1 && !x.rc) p.yk = (p.yk || 0) + 1;
+          if (nat) return;
+          const ban = St.banFor(rng, x, lgm ? p.yk || 0 : -1);
+          if (lgm && x.yc === 1 && !x.rc) p.yk = (p.yk || 0) + 1;
           if (ban) p.ban = (p.ban || 0) + ban;
         });
       });
@@ -228,7 +236,8 @@
       const u = state.user;
       const mu = m.user;
       const x = mu && mu.x && mu.x.in >= 0 ? mu.x : null;
-      if (!m.ref) return;
+      if (!m.ref || m.ref.nat) return;
+      const lgm = m.ref.fid == null;
       if (!x) {
         if (u.ban > 0) {
           u.ban--;
@@ -237,8 +246,8 @@
         return;
       }
       const prev = u.season.ycCount || 0;
-      const ban = St.banFor(rng, x, prev);
-      if (x.yc === 1 && !x.rc) u.season.ycCount = prev + 1;
+      const ban = St.banFor(rng, x, lgm ? prev : -1);
+      if (lgm && x.yc === 1 && !x.rc) u.season.ycCount = prev + 1;
       if (ban) {
         u.ban = (u.ban || 0) + ban;
         const why = x.rc ? (x.yc >= 2 ? 'second' : 'red') : 'yellows';
@@ -289,7 +298,7 @@
       if (!club.coach) {
         const h = ((clubId * 2654435761) >>> 0) % 1000;
         const rng = new FC.RNG(h + 77);
-        const nat = state.leagues[club.lg] ? state.leagues[club.lg].nat : 'IRQ';
+        const nat = state.leagues[club.lg] ? state.leagues[club.lg].nat : club.nat || 'IRQ';
         const nm = FC.World.randomName(rng, rng.chance(0.7) ? nat : 'ESP');
         const keys = Object.keys(STYLES);
         club.coach = { fn: nm[0], ln: nm[1], age: rng.int(38, 64), style: keys[rng.weighted([46, 18, 18, 18])], since: state.season - rng.int(0, 3), sinceW: 0 };

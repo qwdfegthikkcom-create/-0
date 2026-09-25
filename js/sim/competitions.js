@@ -138,8 +138,9 @@
       });
       const u = state.user;
       const ul = FC.Game ? FC.Game.userLeague(state) : null;
-      const uv = key === 'sG' ? u.season.g : u.season.a;
-      if (ul === lg && uv > 0) list.push({ pid: 0, club: FC.Game.userTeam(state), v: uv, ap: u.season.ap });
+      const sl = u.season.lg || u.season;
+      const uv = key === 'sG' ? sl.g : sl.a;
+      if (ul === lg && uv > 0) list.push({ pid: 0, club: FC.Game.userTeam(state), v: uv, ap: sl.ap });
       list.sort((a, b) => b.v - a.v || a.ap - b.ap);
       return list.slice(0, n || 10);
     },

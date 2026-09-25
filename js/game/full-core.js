@@ -2055,7 +2055,16 @@
       }
     });
     m.min = Math.min(final ? 90 + m.st2 : minuteOf(fm), 90 + m.st2);
-    if (final) {
+    if (final && FC.Match.needExtra && FC.Match.needExtra(m)) {
+      // تعادل في مباراة إقصائية: تستمر المباراة إلى الأشواط الإضافية (وضع اللحظات المباشر)
+      m.phase = 'h2';
+      m.done = false;
+      m.pending = null;
+      m.mode = 'play';
+      m.live = true;
+      m.mom = 0;
+      if (m.user) m.user.momentsOn = m.user.state === 'on';
+    } else if (final) {
       m.phase = 'ft';
       m.done = true;
     } else {

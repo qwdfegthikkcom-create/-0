@@ -8,37 +8,66 @@
   const U = FC.util;
   const esc = U.esc;
 
-  // لوحة المباراة القادمة
+  // لوحة المباراة القادمة (أي مسابقة: الدوري، الكأس، القارية، المنتخب)
   function nextMatchPanel(st) {
-    const team = FC.Game.userTeam(st);
     const nf = FC.Game.nextFixture(st);
     if (!nf) return '<div class="panel next"><h3>المباراة القادمة</h3><p class="muted">لا مباريات متبقية هذا الموسم.</p></div>';
+    const meId = nf.me != null ? nf.me : FC.Game.userTeam(st);
     const opp = st.clubs[nf.opp];
-    const me = st.clubs[team];
-    const L = st.leagues[nf.lg];
+    const me = st.clubs[meId];
     const thisWeek = nf.week === st.week;
-    const role = FC.Game.predictedRole(st);
-    const oppPos = FC.Comp.position(st, nf.lg, nf.opp);
-    const form = FC.Comp.clubForm(st, nf.lg, nf.opp, 5);
     const H = nf.home ? me : opp;
     const A = nf.home ? opp : me;
+    const label = FC.Game.refLabel(st, nf.ref);
+    const oppLg = opp && st.leagues[opp.lg] ? opp.lg : null;
+    const form = UI.teamForm(st, nf.opp, 5);
+    const role = nf.nat ? null : FC.Game.predictedRole(st);
     let note = '';
     if (!thisWeek) {
       const ph = FC.Calendar.phase(st.week);
       note = '<div class="note">' + (ph === 'pre' ? 'فترة الإعداد: لا مباريات رسمية هذا الأسبوع' : FC.Calendar.isIntlBreak(st.week) ? 'توقف دولي: لا مباريات للأندية هذا الأسبوع' : 'لا مباراة لفريقك هذا الأسبوع') + '</div>';
     }
+    // نتيجة الذهاب في مباراة الإياب
+    let agg = '';
+    if (nf.ref.agg) agg = '<div class="note">الذهاب: ' + esc(st.clubs[nf.ref.away].short) + ' ' + nf.ref.agg[1] + ' - ' + nf.ref.agg[0] + ' ' + esc(st.clubs[nf.ref.home].short) + '</div>';
+    const where = nf.ref.n ? 'ملعب محايد' : nf.home ? 'على أرضك' : 'خارج أرضك';
+    const oppInfo = oppLg ? 'الخصم: ' + esc(st.leagues[oppLg].short) + ' · المركز ' + FC.Comp.position(st, oppLg, nf.opp) : opp.nt ? 'قوة المنتخب ' + Math.round(FC.Nat.power(st, nf.opp)) : 'الخصم: ' + esc(opp.name);
     return (
-      '<div class="panel next' + (thisWeek ? ' now' : '') + '">' +
-      '<div class="next-h"><h3>' + (thisWeek ? 'مباراة هذا الأسبوع' : 'المباراة القادمة') + '</h3><span class="muted">' + esc(L.short || L.name) + ' · الجولة ' + (nf.r + 1) + '</span></div>' +
-      note +
+      '<div class="panel next' + (thisWeek ? ' now' : '') + (nf.nat ? ' nat' : '') + '">' +
+      '<div class="next-h"><h3>' + (thisWeek ? 'مباراة هذا الأسبوع' : 'المباراة القادمة') + '</h3><span class="muted">' + esc(label) + '</span></div>' +
+      note + agg +
       '<div class="vs">' +
       '<div class="vs-t">' + UI.badge(H, 44) + '<b>' + esc(H.name) + '</b></div>' +
-      '<div class="vs-m"><span class="vs-d">' + esc(UI.weekDate(st, nf.week)) + '</span><span class="vs-x">VS</span><span class="vs-h">' + (nf.home ? 'على أرضك' : 'خارج أرضك') + '</span></div>' +
+      '<div class="vs-m"><span class="vs-d">' + esc(UI.fxDate(st, nf.week, nf.d)) + '</span><span class="vs-x">VS</span><span class="vs-h">' + where + '</span></div>' +
       '<div class="vs-t">' + UI.badge(A, 44) + '<b>' + esc(A.name) + '</b></div>' +
       '</div>' +
-      '<div class="next-f"><span>دورك المتوقع: ' + UI.roleChip(role) + ' <button class="link" data-act="role">لماذا؟</button></span><span>الخصم: المركز ' + oppPos + ' ' + form.map(UI.formChip).join('') + '</span></div>' +
+      '<div class="next-f">' + (role ? '<span>دورك المتوقع: ' + UI.roleChip(role) + ' <button class="link" data-act="role">لماذا؟</button></span>' : '<span>🌍 مع المنتخب</span>') + '<span>' + oppInfo + ' ' + form.map(UI.formChip).join('') + '</span></div>' +
       '</div>'
     );
+  }
+
+  // مسابقاتك هذا الموسم: الكأس، القارية، المنتخب
+  function compsPanel(st) {
+    if (!st.comps || !FC.Cups) return '';
+    const u = st.user;
+    const team = FC.Game.userTeam(st);
+    const rows = FC.Cups.compsOf(st, team)
+      .filter((c) => !c.nat)
+      .map((c) => {
+        const s = FC.Cups.statusOf(st, c, team);
+        return '<button class="comp-row" data-go="comps" data-p=\'{"cat":"' + (c.kind === 'cup' ? 'cup' : 'cont') + '","c":"' + c.id + '"}\'><span>' + (c.kind === 'cup' ? '🏆 ' : '⭐ ') + esc(c.name) + '</span>' + (s ? '<span class="chip-tag ' + (s.k === 'win' ? 'ok' : s.k === 'out' ? 'bad' : 'mid') + '">' + esc(s.txt) + '</span>' : '') + '</button>';
+      });
+    const ntId = FC.Nat ? FC.Nat.idOf(u.nat) : null;
+    const I = u.intl || { caps: 0, g: 0 };
+    const called = ntId != null && FC.Nat.userIn(st, ntId);
+    const natComps = Object.values(st.comps).filter((c) => c.nat && c.kind !== 'fr' && c.teams.indexOf(ntId) >= 0);
+    natComps.forEach((c) => {
+      const s = FC.Cups.statusOf(st, c, ntId);
+      rows.push('<button class="comp-row" data-go="comps" data-p=\'{"cat":"nat","c":"' + c.id + '"}\'><span>🌍 ' + esc(c.name) + '</span>' + (s ? '<span class="chip-tag ' + (s.k === 'win' ? 'ok' : s.k === 'out' ? 'bad' : 'mid') + '">' + esc(s.txt) + '</span>' : '') + '</button>');
+    });
+    const nat =
+      '<button class="comp-row nt" data-go="nation">' + UI.flag(u.nat, 14) + ' <span>منتخب ' + esc(FC.DATA.nations[u.nat].name) + '</span><span class="chip-tag ' + (called ? 'ok' : '') + '">' + (called ? 'مستدعى' : I.caps ? 'خارج القائمة' : 'لم تُستدعَ بعد') + ' · ' + I.caps + ' مباراة / ' + I.g + ' هدف</span></button>';
+    return '<div class="panel"><h3>بطولاتك هذا الموسم</h3><div class="comp-list">' + (rows.length ? rows.join('') : '<p class="muted small">ناديك لا يشارك في كؤوس هذا الموسم.</p>') + nat + '</div></div>';
   }
 
   // جدول مصغّر حول فريقك
@@ -151,7 +180,7 @@
         statusAlerts(st) +
         phoneAlerts(st) +
         '<section class="cta">' + cta + '<button class="btn ghost" data-act="quick">' + UI.icon('fast') + ' محاكاة الأسبوع بسرعة</button><button class="btn ghost" data-go="phone">' + UI.icon('phone') + ' الهاتف</button></section>' +
-        '<div class="grid2">' + nextMatchPanel(st) + messages(st) + miniTable(st) + seasonStats(u) + '</div>'
+        '<div class="grid2">' + nextMatchPanel(st) + compsPanel(st) + messages(st) + miniTable(st) + seasonStats(u) + '</div>'
       );
     },
     bind(el) {
@@ -238,7 +267,8 @@
     }
     if (!st.wk.planned) FC.Game.applyPlan(st, FC.Game.autoPlan(st));
     let last = null;
-    if (FC.Game.userFixtureRef(st) && !st.wk.played) last = FC.Game.simUserMatchAuto(st);
+    let guard = 0;
+    while (FC.Game.userFixtureRef(st) && guard++ < 4) last = FC.Game.simUserMatchAuto(st);
     const rep = FC.Game.endWeek(st);
     rep.quickMatch = last;
     UI.go('report', { rep });
@@ -256,7 +286,19 @@
       const u = st.user;
       let html = '<div class="page-h"><h2>ملخص الأسبوع ' + (rep.week + 1) + '</h2><span class="muted">' + FC.Calendar.seasonLabel(rep.season) + '</span></div>';
       if (rep.promoted) html += '<div class="banner gold">🎉 تم تصعيدك إلى الفريق الأول! قميصك رقم <b>' + u.num + '</b></div>';
-      if (rep.quickMatch) {
+      if (rep.mine && rep.mine.length > 1) {
+        // أكثر من مباراة هذا الأسبوع (دوري + كأس، أو مباراتان دوليتان)
+        html += '<div class="panel"><h3>مبارياتك هذا الأسبوع</h3>' +
+          rep.mine
+            .map((l) => {
+              const o = st.clubs[l.opp];
+              const nm = l.c && st.comps && st.comps[l.c] ? st.comps[l.c].name : l.lg && st.leagues[l.lg] ? st.leagues[l.lg].short : '';
+              const res = l.gf > l.ga ? 'W' : l.gf < l.ga ? 'L' : 'D';
+              return '<div class="kv"><span>' + esc(nm) + ' · ' + (l.h ? 'ضد ' : 'في ضيافة ') + (o ? UI.badge(o, 16) + ' ' + esc(o.short) : '') + '</span><b>' + UI.formChip(res) + ' <span dir="ltr">' + l.gf + '-' + l.ga + '</span>' + (l.p ? ' <small class="muted" dir="ltr">(ت ' + l.p + ')</small>' : '') + ' ' + (l.r != null ? UI.rating(l.r) : '<small class="muted">لم تشارك</small>') + '</b></div>';
+            })
+            .join('') +
+          '</div>';
+      } else if (rep.quickMatch) {
         const q = rep.quickMatch;
         const h = st.clubs[q.home];
         const a = st.clubs[q.away];
