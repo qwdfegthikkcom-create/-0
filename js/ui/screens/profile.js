@@ -81,6 +81,15 @@
             (ih.length ? '<h4>الإصابات السابقة</h4><div class="fixtures">' + ih.slice(0, 8).map((x) => '<div class="fx-row"><span class="fx-d">' + FC.Calendar.seasonLabel(x.s) + '</span><span class="fx-o">' + esc(T[x.k] || x.k) + '</span><span class="muted small">' + esc(FC.Status.durationText(x.d)) + '</span></div>').join('') + '</div>' : '<p class="muted small">لا إصابات حتى الآن.</p>') +
             '</div>';
         })() +
+        (function () {
+          const h = u.clubHist || [];
+          if (!h.length) return '';
+          const T = { academy: 'الأكاديمية', transfer: 'انتقال', loan: 'إعارة', free: 'انتقال حر' };
+          return '<div class="panel"><h3>مسيرتك بالأندية</h3><div class="fixtures">' + h.slice().reverse().map((x) => {
+            const c = st.clubs[x.club];
+            return '<div class="fx-row"><span class="fx-d">' + FC.Calendar.seasonLabel(x.s) + '</span><span class="fx-o">' + (c ? UI.badge(c, 18) + ' ' + esc(c.name) : '—') + '</span><span class="muted small">' + (T[x.type] || '') + (x.fee ? ' · ' + esc(FC.Econ.fmt(x.fee)) : '') + '</span></div>';
+          }).join('') + '</div><div class="kv"><span>القيمة السوقية الآن</span><b dir="ltr">' + esc(FC.Econ.fmt(FC.Econ.value(st, u))) + '</b></div></div>';
+        })() +
         '<div class="panel"><h3>سجل المواسم</h3>' + (hist ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>الموسم</th><th class="l">الفريق</th><th>م</th><th>هـ</th><th>ص</th><th>التقييم</th><th>OVR</th></tr></thead><tbody>' + hist + '</tbody></table></div>' : '<p class="muted">موسمك الأول ما زال جارياً.</p>') + '</div>' +
         (u.log.length ? '<div class="panel"><h3>مبارياتك هذا الموسم</h3><div class="fixtures">' + u.log.slice().reverse().map((l) => '<div class="fx-row"><span class="fx-d">' + esc(UI.weekDate(st, l.w)) + '</span><span class="fx-o">' + UI.badge(st.clubs[l.opp], 16) + ' ' + esc(st.clubs[l.opp] ? st.clubs[l.opp].short : '') + '</span>' + UI.score(l.h ? l.gf : l.ga, l.h ? l.ga : l.gf) + '<span class="muted small">' + (l.mn ? l.mn + "'" : 'لم يشارك') + (l.g ? ' ⚽' + l.g : '') + (l.a ? ' 🅰️' + l.a : '') + '</span>' + UI.rating(l.r) + '</div>').join('') + '</div></div>' : '')
       );

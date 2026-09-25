@@ -178,7 +178,33 @@ check('الإيقافات لكل فريق في الموسم', injStats.bans / (s
 FC.Status.injureAI = origInjAI;
 FC.Status.injureUser = origInjUser;
 FC.Status.banFor = origBan;
-skip('عينات القيم السوقية', 'المرحلة 3');
+// عينات القيم السوقية (لاعب في ذروته بالدوري الإنجليزي)
+{
+  const club = Object.values(state.clubs).find((c) => c.lg === 'ENG');
+  const mk = (ovr, age, pot) => ({ id: 99999999, ovr, age, pot: pot || ovr, club: club.id, fm: 6.7, pos: 'ST' });
+  const v = (o, a, p) => FC.Econ.value(state, mk(o, a, p));
+  const M = (x) => x / 1e6;
+  const m1 = (x) => x.toFixed(1) + ' م$';
+  console.log('  القيم السوقية (ENG، 26 سنة): 60=' + m1(M(v(60, 26))) + ' 70=' + m1(M(v(70, 26))) + ' 80=' + m1(M(v(80, 26))) + ' 85=' + m1(M(v(85, 26))) + ' 88=' + m1(M(v(88, 26))) + ' | شاب 18 (72، إمكانات 88)=' + m1(M(v(72, 18, 88))) + ' | 33 سنة (80)=' + m1(M(v(80, 33))));
+  check('القيمة السوقية 60 (ذروة، دوري كبير)', M(v(60, 26)), 0.35, 0.75, m1);
+  check('القيمة السوقية 70', M(v(70, 26)), 3, 5.5, m1);
+  check('القيمة السوقية 80', M(v(80, 26)), 28, 45, m1);
+  check('القيمة السوقية 85', M(v(85, 26)), 80, 130, m1);
+  check('القيمة السوقية 88', M(v(88, 26)), 150, 210, m1);
+  check('الشاب الموهوب أغلى من المخضرم بنفس التقييم', v(80, 19, 90) / v(80, 32), 3, 1e9, f1);
+  const irq = Object.values(state.clubs).find((c) => c.lg === 'IRQ');
+  check('معامل الدوري العراقي (مقارنة بالإنجليزي)', FC.Econ.value(state, Object.assign(mk(70, 26), { club: irq.id })) / v(70, 26), 0.14, 0.22, f2);
+}
+// سوق الانتقالات ومسيرتك
+{
+  const lastS = state.season - 1;
+  const n = (state.tcount || {})[lastS] || 0;
+  check('صفقات الأندية في الموسم (كل الدوريات)', n, 60, 600, (x) => String(x), 'آخر موسم كامل');
+  const moves = (state.user.clubHist || []).map((h) => (state.clubs[h.club] ? state.clubs[h.club].short : '?') + '(' + h.type + ' ' + h.s + ')');
+  console.log('  أنديتك: ' + moves.join(' ← '));
+  check('رصيدك موجب بعد المسيرة التلقائية', state.user.money > 0 ? 1 : 0, 1, 1, (x) => (x ? 'نعم' : 'لا'), FC.Econ.fmt(state.user.money));
+  check('لديك عقد ساري (لست عالقاً كلاعب حر)', state.user.contract || state.user.retired ? 1 : 0, 1, 1, (x) => (x ? 'نعم' : 'لا'));
+}
 
 console.log('\nالأهداف لكل دوري:');
 FC.DATA.leagueOrder.forEach((lg) => {

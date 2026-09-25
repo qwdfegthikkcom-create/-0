@@ -11,7 +11,7 @@
   const FC = G.FC = G.FC || {};
 
   const APP = 'masirat-najm';
-  const VERSION = 2;
+  const VERSION = 3;
   const DB_NAME = 'masirat-najm';
   const STORE = 'kv';
   const LS_PREFIX = 'mn_';
@@ -76,6 +76,13 @@
         if (u.season) u.season.ycCount = u.season.yc || 0;
       }
       o.v = 2;
+      return o;
+    },
+    // الإصدار 3 (المرحلة 3): العقد والمال والوكيل والعروض (العقد يُنشأ تلقائياً عند التحميل)
+    2: (o) => {
+      o.offers = o.offers || [];
+      o.tlog = o.tlog || [];
+      o.v = 3;
       return o;
     },
   };

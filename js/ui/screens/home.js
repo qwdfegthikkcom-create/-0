@@ -76,6 +76,16 @@
     return h;
   }
 
+  // تنبيهات الهاتف: عروض، لاعب حر
+  function phoneAlerts(st) {
+    const u = st.user;
+    const n = FC.Transfer.active(st).length;
+    let h = '';
+    if (u.freeAgent) h += '<button class="panel alert bad ph-go" data-go="phone" data-p=\'{"app":"offers"}\'><div class="al-h"><span class="al-i">📝</span><div><b>أنت لاعب حر</b><span class="muted small">لن تلعب حتى توقّع عقداً — راجع العروض</span></div></div></button>';
+    else if (n) h += '<button class="panel alert ph-go" data-go="phone" data-p=\'{"app":"offers"}\'><div class="al-h"><span class="al-i">📝</span><div><b>لديك ' + (n === 1 ? 'عرض جديد' : n + ' عروض') + '</b><span class="muted small">افتح الهاتف للتفاوض أو الرد</span></div></div></button>';
+    return h;
+  }
+
   // سطر أسباب ثقة المدرب
   function trustLine(st) {
     const rs = FC.Status.trustReasons(st).slice(0, 3);
@@ -130,7 +140,7 @@
         '<div class="hero-info panel">' +
         '<h2>' + esc(FC.Player.displayName(u)) + '</h2>' +
         '<div class="hero-sub">' + UI.flag(u.nat, 14) + ' ' + esc(FC.Player.POS[u.pos].name) + ' · ' + u.age + ' سنة · ' + UI.badge(club, 18) + ' ' + esc(club.name) + (u.team === 'Y' ? ' <span class="chip-tag">الشباب</span>' : '') + (u.captain ? ' <span class="chip-tag cap">© القائد</span>' : '') + '</div>' +
-        '<div class="hero-pot">الإمكانات المقدّرة <b dir="ltr">' + pr[0] + '–' + pr[1] + '</b></div>' +
+        '<div class="hero-pot">الإمكانات المقدّرة <b dir="ltr">' + pr[0] + '–' + pr[1] + '</b> · القيمة <b dir="ltr">' + esc(FC.Econ.fmt(FC.Econ.value(st, u))) + '</b></div>' +
         UI.meter('اللياقة', u.fit) +
         UI.meter('الجاهزية', u.sharp != null ? u.sharp : 70) +
         UI.meter('المعنويات', u.morale) +
@@ -139,7 +149,8 @@
         '<div class="form-row"><span>الفورمة</span>' + (form.length ? form.map((r) => UI.rating(r)).join('') : '<span class="muted small">لا مباريات بعد</span>') + '</div>' +
         '</div></section>' +
         statusAlerts(st) +
-        '<section class="cta">' + cta + '<button class="btn ghost" data-act="quick">' + UI.icon('fast') + ' محاكاة الأسبوع بسرعة</button></section>' +
+        phoneAlerts(st) +
+        '<section class="cta">' + cta + '<button class="btn ghost" data-act="quick">' + UI.icon('fast') + ' محاكاة الأسبوع بسرعة</button><button class="btn ghost" data-go="phone">' + UI.icon('phone') + ' الهاتف</button></section>' +
         '<div class="grid2">' + nextMatchPanel(st) + messages(st) + miniTable(st) + seasonStats(u) + '</div>'
       );
     },
@@ -221,6 +232,10 @@
   // أسبوع كامل بسرعة (خطة تلقائية + مباراة تلقائية)
   UI.quickWeek = async function () {
     const st = FC.State.cur;
+    if (st.user.freeAgent) {
+      UI.toast('أنت لاعب حر: وقّع عقداً أولاً من الهاتف', 'bad');
+      return UI.go('phone', { app: 'offers' });
+    }
     if (!st.wk.planned) FC.Game.applyPlan(st, FC.Game.autoPlan(st));
     let last = null;
     if (FC.Game.userFixtureRef(st) && !st.wk.played) last = FC.Game.simUserMatchAuto(st);

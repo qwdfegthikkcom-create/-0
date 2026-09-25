@@ -30,6 +30,7 @@
     star: '<path d="M12 2l3 7 7 .6-5.3 4.6 1.7 7L12 17l-6.4 3.8 1.7-7L2 9.6 9 9z"/>',
     whistle: '<circle cx="9" cy="14" r="6"/><path d="M13 10l8-4v5h-6"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    phone: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10.5 18.5h3"/>',
   };
   UI.icon = (name, cls) => '<svg class="ic ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
 

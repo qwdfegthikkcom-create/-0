@@ -202,18 +202,19 @@
         summary.played = true;
         summary.rating = r;
         summary.userStats = st;
-        if (firstGoal) FC.Msg.add(state, 'family', 'هدفك الأول!', FC.TXT.msg(rng, 'familyFirstGoal', {}));
+        if (firstGoal) FC.Msg.add(state, 'family', 'هدفك الأول!', FC.TXT.msg(rng, 'familyFirstGoal', {}), { reply: 'family' });
         if (firstGame) {
           state.flags.firstSenior = true;
-          FC.Msg.add(state, 'family', 'أول ظهور مع الكبار', FC.TXT.msg(rng, 'familyFirstGame', {}));
+          FC.Msg.add(state, 'family', 'أول ظهور مع الكبار', FC.TXT.msg(rng, 'familyFirstGame', {}), { reply: 'family' });
         }
       } else {
         u.minHist.push(0);
         u.morale = U.clamp(u.morale - (summary.role === 'bench' ? 2 : 3), 0, 100);
       }
       if (u.minHist.length > FC.BAL.growth.minutesWindow) u.minHist.shift();
-      // الإيقافات (البطاقات) بعد المباراة
+      // الإيقافات (البطاقات) بعد المباراة، ومكافآت العقد
       FC.Status.afterMatchUser(state, m, rng);
+      FC.Econ.matchBonus(state, summary);
       u.log.push({ w: state.week, lg: summary.lg, opp: S === m.sides[0] ? m.sides[1].id : m.sides[0].id, h: si === 0, gf, ga, r: summary.rating, g: summary.userStats ? summary.userStats.g : 0, a: summary.userStats ? summary.userStats.a : 0, mn: summary.userStats ? summary.userStats.mn : 0 });
       state.wk.played = true;
       state.wk.last = summary;
@@ -259,6 +260,9 @@
       FC.Status.weeklyAI(state);
       FC.Status.coachReview(state, rng);
       if (state.week === FC.BAL.coach.captainWeek) FC.Status.captainReview(state, rng);
+      // المال والانتقالات
+      FC.Econ.weekly(state);
+      FC.Transfer.weekly(state, rng);
       u.morale += u.morale > BS.moraleMid ? -BS.moraleDrift : u.morale < BS.moraleMid ? BS.moraleDrift : 0;
       // التصعيد
       if (u.team === 'Y') Game.checkPromotion(state, rep);
@@ -266,9 +270,9 @@
       if (FC.Calendar.phase(state.week) === 'season' && state.week % 8 === 0 && u.minHist.length >= 3) {
         const share = U.avg(u.minHist);
         const form = FC.Player.formOf(u);
-        if (share < 0.2) FC.Msg.add(state, 'coach', 'حديث مع المدرب', FC.TXT.msg(rng, 'coachNoPlay', {}));
-        else if (form >= 7.2) FC.Msg.add(state, 'coach', 'إشادة من المدرب', FC.TXT.msg(rng, 'coachGood', {}));
-        else if (form <= 6.3) FC.Msg.add(state, 'coach', 'تنبيه من المدرب', FC.TXT.msg(rng, 'coachBad', {}));
+        if (share < 0.2) FC.Msg.add(state, 'coach', 'حديث مع المدرب', FC.TXT.msg(rng, 'coachNoPlay', {}), { reply: 'coachBench' });
+        else if (form >= 7.2) FC.Msg.add(state, 'coach', 'إشادة من المدرب', FC.TXT.msg(rng, 'coachGood', {}), { reply: 'coachPraise' });
+        else if (form <= 6.3) FC.Msg.add(state, 'coach', 'تنبيه من المدرب', FC.TXT.msg(rng, 'coachBad', {}), { reply: 'coachWarn' });
       }
       if (state.week === FC.BAL.cal.seasonEndWeek) {
         Game.seasonEnd(state, rep);
@@ -287,6 +291,7 @@
 
     // أسبوع كامل تلقائي (للمحاكاة السريعة والاختبار)
     autoWeek(state) {
+      FC.Transfer.autoDecide(state, FC.rngOf(state));
       if (!state.wk.planned) Game.applyPlan(state, Game.autoPlan(state));
       if (Game.userFixtureRef(state) && !state.wk.played) Game.simUserMatchAuto(state);
       return Game.endWeek(state);
@@ -319,6 +324,7 @@
       u.num = 0;
       FC.World.assignNumbers(state, club, rng);
       u.trust = FC.BAL.status.trustStart;
+      FC.Transfer.firstPro(state);
       FC.Msg.add(state, 'club', 'تصعيد إلى الفريق الأول!', FC.TXT.msg(rng, 'promotion', { c: club.name, n: u.num }), { big: 'promotion' });
       FC.Status.captainReview(state, rng);
       if (rep) rep.promoted = true;
@@ -393,6 +399,7 @@
       }
       state.season++;
       state.week = 0;
+      FC.Transfer.rollover(state, rng);
       FC.Comp.newSeason(state);
       FC.Msg.add(state, 'club', 'موسم جديد', FC.TXT.msg(rng, 'newSeason', { s: FC.Calendar.seasonLabel(state.season), age: u.age }));
       FC.Status.captainReview(state, rng);

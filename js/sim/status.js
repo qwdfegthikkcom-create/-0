@@ -181,7 +181,7 @@
 
     // هل اللاعب متاح للمباراة؟
     available(state, p) {
-      if (p.id === 0) return !p.inj && !(p.ban > 0);
+      if (p.id === 0) return !p.inj && !(p.ban > 0) && !p.freeAgent;
       return !(p.inj > 0) && !(p.ban > 0);
     },
 

@@ -22,12 +22,13 @@
   function topbar(st) {
     const club = st.clubs[FC.Game.userTeam(st)];
     const unread = FC.Msg.unread(st);
+    const offers = FC.Transfer ? FC.Transfer.active(st).length : 0;
     return (
       '<header class="topbar">' +
       '<button class="icon-btn" data-nav-act="pause" aria-label="القائمة">' + UI.icon('menu') + '</button>' +
       '<div class="tb-mid"><div class="tb-date">' + esc(UI.date(st)) + '</div>' +
       '<div class="tb-sub">' + esc(FC.Calendar.phaseLabel(st.week)) + ' · ' + FC.Calendar.seasonLabel(st.season) + '</div></div>' +
-      '<button class="icon-btn tb-mail" data-nav-act="inbox" aria-label="الرسائل">' + UI.icon('mail') + (unread ? '<i class="dot">' + unread + '</i>' : '') + '</button>' +
+      '<button class="icon-btn tb-mail" data-nav-act="phone" aria-label="الهاتف">' + UI.icon('phone') + (unread || offers ? '<i class="dot">' + (unread + offers) + '</i>' : '') + '</button>' +
       '<div class="tb-club">' + UI.badge(club, 30) + '</div>' +
       '</header>'
     );
@@ -72,6 +73,7 @@
         if (FC.Sound) FC.Sound.click();
         if (n.dataset.navAct === 'pause') UI.pauseMenu();
         if (n.dataset.navAct === 'inbox') UI.inbox();
+        if (n.dataset.navAct === 'phone') UI.go('phone');
       }
     });
     if (scr.bind) scr.bind(el, params || {});

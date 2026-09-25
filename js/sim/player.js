@@ -61,7 +61,7 @@
   for (const g in TRAIN) TRAIN[g].attrs.forEach((k) => (TRAIN_OF[k] = g));
 
   // حقول لاعب الذكاء الاصطناعي بالترتيب (للحفظ المضغوط)
-  const AI_FIELDS = ['id', 'fn', 'ln', 'nat', 'age', 'pos', 'ovr', 'pot', 'club', 'num', 'ht', 'ft', 'fm', 'fit', 'sAp', 'sSt', 'sMn', 'sG', 'sA', 'sRs', 'sYc', 'sRc', 'cAp', 'cG', 'cA', 'inj', 'ban', 'yk'];
+  const AI_FIELDS = ['id', 'fn', 'ln', 'nat', 'age', 'pos', 'ovr', 'pot', 'club', 'num', 'ht', 'ft', 'fm', 'fit', 'sAp', 'sSt', 'sMn', 'sG', 'sA', 'sRs', 'sYc', 'sRc', 'cAp', 'cG', 'cA', 'inj', 'ban', 'yk', 'ce'];
 
   // أثر الطول والوزن على السمات
   function bodyAdj(key, ht, wt) {
@@ -259,6 +259,7 @@
         if (p.inj == null) p.inj = 0;
         if (p.ban == null) p.ban = 0;
         if (p.yk == null) p.yk = 0;
+        if (p.ce == null) p.ce = (state.season || 2026) + 2;
       }
       const u = state.user;
       if (u) {
@@ -271,6 +272,14 @@
         if (u.joinSeason == null) u.joinSeason = state.startSeason != null ? state.startSeason : state.season;
         if (!u.injHist) u.injHist = [];
         if (u.season && u.season.ycCount == null) u.season.ycCount = 0;
+        if (u.money == null) u.money = FC.BAL.econ.startMoney;
+        if (!u.bank) u.bank = [];
+        if (u.agent === undefined) u.agent = null;
+        if (!u.clubHist) u.clubHist = [];
+        if (!u.contract && !u.freeAgent && FC.Transfer) {
+          if (u.team === 'Y') FC.Transfer.youthContract(state);
+          else FC.Transfer.firstPro(state);
+        }
       }
     },
   });
