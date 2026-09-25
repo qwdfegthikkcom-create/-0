@@ -231,3 +231,11 @@ input[type=range] { width: 100%; margin-top: 10px; accent-color: var(--gold); he
 .stat-grid b { font-size: 19px; font-family: var(--head); }
 .stat-grid span { font-size: 11.5px; color: var(--muted); text-align: center; }
 .radar { display: block; margin: 0 auto; }
+
+/* ===== نص الحفظ (تصدير/استيراد بالنسخ) ===== */
+.save-text {
+  width: 100%; min-height: 150px; margin: 8px 0 10px; padding: 10px; border-radius: 12px; resize: vertical;
+  border: 1px solid var(--line); background: rgba(0, 0, 0, 0.35); color: var(--ivory);
+  font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; direction: ltr; text-align: left;
+}
+.modal-b > .btn { width: 100%; }

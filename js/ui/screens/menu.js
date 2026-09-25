@@ -75,6 +75,7 @@
         '<div class="row gap">' +
         (FC.State.cur ? '<button class="btn" data-act="export">تصدير المسيرة الحالية</button>' : '') +
         '<label class="btn ghost file-btn">استيراد ملف<input type="file" accept=".json,application/json" hidden></label>' +
+        '<button class="btn ghost" data-act="paste">لصق نص حفظ</button>' +
         '</div></div>' +
         '<p class="muted small">طريقة التخزين: <span class="be"></span></p>' +
         '</div>'
@@ -128,12 +129,25 @@
           }
         }
         if (t.dataset.act === 'export') UI.exportSave();
+        if (t.dataset.act === 'paste') {
+          const v = await UI.modal('لصق نص حفظ', '<textarea class="save-text" id="paste-save" placeholder="الصق نص الحفظ هنا"></textarea>', [
+            { label: 'استيراد', cls: 'gold', value: 'ok' },
+            { label: 'إلغاء', cls: 'ghost', value: null },
+          ], {
+            onOpen(m) {
+              const ta = m.querySelector('#paste-save');
+              ta.addEventListener('input', () => (pasted = ta.value));
+            },
+          });
+          if (v === 'ok' && pasted.trim()) await importText(pasted);
+          pasted = '';
+        }
       });
-      el.querySelector('input[type=file]').addEventListener('change', async (ev) => {
-        const f = ev.target.files[0];
-        if (!f) return;
+      let pasted = '';
+      // استيراد نص حفظ إلى أول خانة فارغة (أو الخانة الحالية)
+      async function importText(txt) {
         try {
-          const st = FC.Save.importText(await f.text());
+          const st = FC.Save.importText(txt);
           const slots = await FC.Save.list();
           const empty = slots.find((s) => !s.meta);
           const slot = empty ? empty.slot : inGame ? FC.State.slot : 1;
@@ -141,18 +155,60 @@
           UI.toast('تم الاستيراد إلى الخانة ' + slot, 'ok');
           draw();
         } catch (e) {
-          UI.toast('ملف غير صالح: ' + e.message, 'bad');
+          UI.toast('نص غير صالح: ' + e.message, 'bad');
         }
+      }
+      el.querySelector('input[type=file]').addEventListener('change', async (ev) => {
+        const f = ev.target.files[0];
+        if (!f) return;
+        await importText(await f.text());
         ev.target.value = '';
       });
     },
   };
 
   // تنزيل ملف الحفظ
+  // هل تعمل اللعبة داخل إطار (صفحة مستضافة)؟ هناك يمنع المتصفح تنزيل الملفات
+  function framed() {
+    try {
+      return G.self !== G.top;
+    } catch (e) {
+      return true;
+    }
+  }
+
   UI.exportSave = function () {
     const st = FC.State.cur;
     if (!st) return;
-    const blob = new Blob([FC.Save.exportText(st)], { type: 'application/json' });
+    const text = FC.Save.exportText(st);
+    if (framed()) {
+      UI.modal(
+        'تصدير المسيرة',
+        '<p class="muted small">انسخ هذا النص واحفظه عندك. لاستعادته: «الحفظ والتحميل» ← «لصق نص حفظ».</p>' +
+          '<textarea class="save-text" readonly>' + esc(text) + '</textarea>' +
+          '<button class="btn gold" data-copy>نسخ النص</button>',
+        [],
+        {
+          onOpen(el) {
+            const ta = el.querySelector('.save-text');
+            el.querySelector('[data-copy]').addEventListener('click', () => {
+              const fallback = () => {
+                ta.focus();
+                ta.select();
+                UI.toast('النص محدد: انسخه يدوياً');
+              };
+              try {
+                navigator.clipboard.writeText(text).then(() => UI.toast('تم نسخ نص الحفظ', 'ok'), fallback);
+              } catch (e) {
+                fallback();
+              }
+            });
+          },
+        }
+      );
+      return;
+    }
+    const blob = new Blob([text], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'masirat-najm-' + st.user.ln + '-' + st.season + '.json';

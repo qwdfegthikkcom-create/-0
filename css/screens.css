@@ -193,7 +193,7 @@
 .moment.out { animation: momentOut 0.28s ease forwards; }
 @keyframes momentIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
 @keyframes momentOut { to { opacity: 0; transform: scale(0.98); } }
-.m-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; background: linear-gradient(180deg, #0b0f1a, rgba(11, 15, 26, 0.85)); border-bottom: 1px solid var(--line); }
+.m-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px; background: linear-gradient(180deg, #0b0f1a, rgba(11, 15, 26, 0.85)); border-bottom: 1px solid var(--line); }
 .m-clock { font-weight: 800; background: rgba(212, 175, 55, 0.15); border-radius: 8px; padding: 3px 8px; font-variant-numeric: tabular-nums; }
 .m-head { min-width: 0; }
 .m-title { font-family: var(--head); color: var(--gold2); font-size: 18px; line-height: 1.2; }
