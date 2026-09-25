@@ -875,14 +875,17 @@
     },
 
     // اختيار قالب عشوائي مع تجنب تكرار آخر قالبين
+    // سحب رقم عشوائي واحد فقط دائماً (حتى تبقى المحاكاة حتمية بعد الحفظ والتحميل)
     pick(rng, list, key) {
       if (!list || !list.length) return '';
-      const recent = lastUsed[key] || [];
+      // ذاكرة «آخر القوالب» خاصة بكل مسيرة (داخل مولّدها) حتى تتطابق نسختان من الحفظ نفسه
+      const mem = rng ? rng._mem || (rng._mem = {}) : lastUsed;
+      const recent = mem[key] || [];
       let i = Math.floor(rng.next() * list.length);
-      for (let t = 0; t < 4 && recent.indexOf(i) >= 0 && list.length > 3; t++) i = Math.floor(rng.next() * list.length);
+      for (let t = 0; t < 4 && recent.indexOf(i) >= 0 && list.length > 3; t++) i = (i + 1) % list.length;
       recent.push(i);
       if (recent.length > 2) recent.shift();
-      lastUsed[key] = recent;
+      mem[key] = recent;
       return list[i];
     },
 

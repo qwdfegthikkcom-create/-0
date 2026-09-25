@@ -24,7 +24,7 @@
       const g = FC.Player.TRAIN[it.g];
       return 'تدريب فردي: ' + g.name + ' (' + INT_NAMES[it.int] + ')' + (it.mult != null ? ' — لعبت ×' + it.mult.toFixed(1) : ' — تلقائي ×1.0');
     }
-    return { physio: 'علاج طبيعي واستشفاء', rest: 'راحة كاملة', video: 'تحليل فيديو المباريات', family: 'وقت مع العائلة والأصدقاء' }[it.k];
+    return { physio: 'علاج طبيعي واستشفاء', rest: 'راحة كاملة', video: 'تحليل فيديو المباريات', family: 'وقت مع العائلة والأصدقاء', media: 'حدث إعلامي أو إعلاني' }[it.k];
   }
 
   UI.screens.week = {
@@ -41,7 +41,7 @@
           '<div class="page-h"><h2>خطة الأسبوع</h2><span class="muted">' + esc(UI.date(st)) + '</span></div>' +
           '<div class="panel"><h3>✓ تم اعتماد خطة هذا الأسبوع</h3><ul class="plan-list">' +
           (st.wk.plan.length ? st.wk.plan.map((it) => '<li>' + esc(label(it)) + '</li>').join('') : '<li class="muted">تدريب الفريق فقط</li>') +
-          '</ul>' + UI.meter('اللياقة', u.fit) + '</div>' +
+          '</ul>' + (st.wk.mediaPay ? '<p class="muted small">دخل الحدث الإعلامي: ' + esc(FC.Econ.fmt(st.wk.mediaPay)) + '</p>' : '') + UI.meter('اللياقة', u.fit) + '</div>' +
           '<div class="cta">' +
           (fx && !st.wk.played ? '<button class="btn gold big" data-go="matchPre">' + UI.icon('whistle') + ' إلى المباراة</button>' : '<button class="btn gold big" data-act="endweek">' + UI.icon('play') + ' إنهاء الأسبوع</button>') +
           '</div>'
@@ -73,6 +73,7 @@
         ['rest', 'راحة كاملة', '+' + W.rest.fit + ' لياقة، معنويات أفضل قليلاً', W.rest.energy],
         ['video', 'تحليل فيديو', 'تحسن ذهني بسيط + ثقة المدرب', W.video.energy],
         ['family', 'العائلة والأصدقاء', '+' + W.family.morale + ' معنويات', W.family.energy],
+        ['media', 'حدث إعلامي أو إعلاني', 'مال (نحو ' + FC.Econ.fmt(Math.max(FC.BAL.life.media.min, (u.contract ? u.contract.wage : 0) * FC.BAL.life.media.wage + (FC.Life ? FC.Life.sponsorWeekly(u.fame || 0) * 0.5 : 0))) + ') + شهرة، ويتعبك قليلاً', W.media.energy],
       ];
       return (
         '<div class="page-h"><h2>خطة الأسبوع</h2><span class="muted">' + esc(UI.date(st)) + '</span></div>' +

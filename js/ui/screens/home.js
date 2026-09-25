@@ -112,6 +112,8 @@
     let h = '';
     if (u.freeAgent) h += '<button class="panel alert bad ph-go" data-go="phone" data-p=\'{"app":"offers"}\'><div class="al-h"><span class="al-i">📝</span><div><b>أنت لاعب حر</b><span class="muted small">لن تلعب حتى توقّع عقداً — راجع العروض</span></div></div></button>';
     else if (n) h += '<button class="panel alert ph-go" data-go="phone" data-p=\'{"app":"offers"}\'><div class="al-h"><span class="al-i">📝</span><div><b>لديك ' + (n === 1 ? 'عرض جديد' : n + ' عروض') + '</b><span class="muted small">افتح الهاتف للتفاوض أو الرد</span></div></div></button>';
+    const sp = (u.spOffers || []).length;
+    if (sp) h += '<button class="panel alert ph-go" data-go="phone" data-p=\'{"app":"sponsors"}\'><div class="al-h"><span class="al-i">✍️</span><div><b>' + (sp === 1 ? 'عرض رعاية جديد' : sp + ' عروض رعاية') + '</b><span class="muted small">' + esc(u.spOffers[0].name) + ' — افتح تطبيق الرعاة</span></div></div></button>';
     return h;
   }
 
@@ -170,6 +172,7 @@
         '<h2>' + esc(FC.Player.displayName(u)) + '</h2>' +
         '<div class="hero-sub">' + UI.flag(u.nat, 14) + ' ' + esc(FC.Player.POS[u.pos].name) + ' · ' + u.age + ' سنة · ' + UI.badge(club, 18) + ' ' + esc(club.name) + (u.team === 'Y' ? ' <span class="chip-tag">الشباب</span>' : '') + (u.captain ? ' <span class="chip-tag cap">© القائد</span>' : '') + '</div>' +
         '<div class="hero-pot">الإمكانات المقدّرة <b dir="ltr">' + pr[0] + '–' + pr[1] + '</b> · القيمة <b dir="ltr">' + esc(FC.Econ.fmt(FC.Econ.value(st, u))) + '</b></div>' +
+        (FC.Life ? '<div class="hero-fame"><span>⭐ الشهرة <b>' + Math.round(u.fame || 0) + '</b></span><span>📣 <b>' + FC.Life.fmtNum(u.followers || 0) + '</b> متابع</span>' + ((u.sponsors || []).length ? '<span>✍️ ' + u.sponsors.length + ' رعاة</span>' : '') + '</div>' : '') +
         UI.meter('اللياقة', u.fit) +
         UI.meter('الجاهزية', u.sharp != null ? u.sharp : 70) +
         UI.meter('المعنويات', u.morale) +
@@ -178,6 +181,7 @@
         '<div class="form-row"><span>الفورمة</span>' + (form.length ? form.map((r) => UI.rating(r)).join('') : '<span class="muted small">لا مباريات بعد</span>') + '</div>' +
         '</div></section>' +
         statusAlerts(st) +
+        (UI.eventCard ? UI.eventCard(st) : '') +
         phoneAlerts(st) +
         '<section class="cta">' + cta + '<button class="btn ghost" data-act="quick">' + UI.icon('fast') + ' محاكاة الأسبوع بسرعة</button><button class="btn ghost" data-go="phone">' + UI.icon('phone') + ' الهاتف</button></section>' +
         '<div class="grid2">' + nextMatchPanel(st) + compsPanel(st) + messages(st) + miniTable(st) + seasonStats(u) + '</div>'
@@ -187,8 +191,9 @@
       const st = FC.State.cur;
       st.flags.shine = false;
       el.addEventListener('click', async (ev) => {
-        const t = ev.target.closest('[data-act],[data-msg]');
+        const t = ev.target.closest('[data-act],[data-msg],[data-ev]');
         if (!t) return;
+        if (t.dataset.ev) return UI.chooseEvent(parseInt(t.dataset.ev, 10));
         if (t.dataset.msg) return UI.inbox(parseInt(t.dataset.msg, 10));
         const a = t.dataset.act;
         if (a === 'inbox') UI.inbox();
@@ -330,6 +335,9 @@
           rep.results.map((f) => '<div class="res-row' + (f[0] === team || f[1] === team ? ' me' : '') + '"><span class="rt-h">' + esc(st.clubs[f[0]].short) + '</span>' + UI.score(f[2], f[3]) + '<span class="rt-a">' + esc(st.clubs[f[1]].short) + '</span></div>').join('') +
           '</div><p class="muted small">مركز فريقك: ' + FC.Comp.position(st, lg, team) + '</p></div>';
       }
+      // عناوين الأخبار هذا الأسبوع
+      const nws = (st.news || []).filter((n) => n.s === rep.season && n.w === rep.week).slice(0, 4);
+      if (nws.length) html += '<div class="panel"><div class="next-h"><h3>📰 عناوين الأسبوع</h3><button class="link" data-go="phone" data-p=\'{"app":"news"}\'>كل الأخبار</button></div>' + nws.map((n) => '<div class="nw-line">' + esc(n.h) + '</div>').join('') + '</div>';
       if (rep.msgs && rep.msgs.length) html += '<div class="panel"><p>📩 لديك ' + rep.msgs.length + ' رسالة جديدة</p><button class="btn small" data-act="inbox">قراءة</button></div>';
       html += '<div class="cta"><button class="btn gold big" data-go="home">متابعة</button></div>';
       return '<div class="report">' + html + '</div>';

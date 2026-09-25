@@ -288,6 +288,8 @@
   UI.confetti = function (n) {
     const cv = document.getElementById('fx');
     if (!cv) return;
+    // يجب إظهار اللوحة قبل قياسها (المخفية مقاسها صفر فتتمدد نقطة واحدة على الشاشة كلها)
+    cv.classList.add('on');
     const d = FC.Draw.setup(cv);
     const ctx = d.ctx;
     const cols = ['#D4AF37', '#F2D675', '#F5F0E1', '#b8871f', '#fff3c4'];

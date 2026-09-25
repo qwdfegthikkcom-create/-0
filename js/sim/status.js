@@ -38,6 +38,7 @@
       if (p.id === 0) {
         k *= B.proneMin + (p.hid.inj / 20) * (B.proneMax - B.proneMin);
         if (state.wk && state.wk.physio) k *= B.physioMult;
+        if (FC.Life && FC.Life.has(state, 'physio')) k *= FC.BAL.life.physioRisk;
         if (p.reinj > 0) k *= B.reinjMult;
       }
       return k;
@@ -73,6 +74,7 @@
       if (u.injHist.length > 30) u.injHist.shift();
       const weeks = Math.max(1, Math.round(inj.days / 7));
       FC.Msg.add(state, 'medical', 'تقرير طبي: ' + inj.name, FC.TXT.msg(rng, 'injury', { i: inj.name, d: St.durationText(inj.days), w: weeks }), { big: inj.days >= 21 ? 'injury' : null });
+      if (FC.Life && inj.days >= 14 && (u.fame || 0) >= 8) FC.Life.news(state, 'you', 'youInjury', { p: FC.Player.displayName(u), t: state.clubs[FC.Game.userTeam(state)] ? state.clubs[FC.Game.userTeam(state)].short : '', n: St.durationText(inj.days) });
       return inj;
     },
 

@@ -38,7 +38,8 @@
       const profF = U.lerp(BG.profMin, BG.profMax, (u.hid.prof - 1) / 19);
       const diffF = FC.BAL.diff[state.diff].growth;
       const injF = u.inj ? FC.BAL.growth.injured : 1; // المصاب يتطور أبطأ
-      return { minutesF, facF, profF, diffF, injF, all: minutesF * facF * profF * diffF * injF };
+      const lifeF = FC.Life ? FC.Life.growthF(state) : 1; // المدرب الشخصي والمعسكرات
+      return { minutesF, facF, profF, diffF, injF, lifeF, all: minutesF * facF * profF * diffF * injF * lifeF };
     },
 
     // مضاعف تدريب سمة هذا الأسبوع
@@ -46,7 +47,7 @@
       const BG = FC.BAL.growth;
       const g = FC.Player.TRAIN_OF[key];
       if (g && wk.tm && wk.tm[g] != null) return wk.tm[g];
-      if (FC.Player.GROUP_OF[key] === 'men') return wk.video ? BG.videoMental : BG.untrained;
+      if (FC.Player.GROUP_OF[key] === 'men') return wk.video || wk.mental ? BG.videoMental : BG.untrained;
       return BG.untrained;
     },
 

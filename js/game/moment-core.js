@@ -396,7 +396,8 @@
     if (e.role === 'user') {
       s *= 1 + ((100 - (e.fit || 100)) / 100) * B.fatigueK;
       s *= B.diffAim[sc.diff] || 1;
-      if (sc.pd.derby) s *= 1.04;
+      if (sc.pd.derby && !sc.pd.calm) s *= 1.04;
+      if (sc.pd.calm) s *= FC.BAL.life ? FC.BAL.life.mentalCalm : 0.96;
     }
     if (power > B.overPower) s *= 1 + (power - B.overPower) * 3;
     if (kind === 'shot' && d > 16) s *= 1 + (d - 16) * 0.02;

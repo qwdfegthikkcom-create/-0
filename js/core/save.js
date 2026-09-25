@@ -11,7 +11,7 @@
   const FC = G.FC = G.FC || {};
 
   const APP = 'masirat-najm';
-  const VERSION = 4;
+  const VERSION = 5;
   const DB_NAME = 'masirat-najm';
   const STORE = 'kv';
   const LS_PREFIX = 'mn_';
@@ -88,6 +88,11 @@
     // الإصدار 4 (المرحلة 4): الكؤوس والبطولات القارية والمنتخبات (تُنشأ عند التحميل في fillDefaults)
     3: (o) => {
       o.v = 4;
+      return o;
+    },
+    // الإصدار 5 (المرحلة 5): الشهرة والأخبار و«نبض» والرعاة ونمط الحياة والغريم (تُنشأ عند التحميل)
+    4: (o) => {
+      o.v = 5;
       return o;
     },
   };

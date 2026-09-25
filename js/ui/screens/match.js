@@ -399,6 +399,7 @@
         (motm ? '<div class="motm">⭐ رجل المباراة: <b>' + esc(nm(motm)) + '</b> ' + UI.rating(motm.rt) + '</div>' : '') +
         '</div>' +
         youHtml +
+        (UI.afterMatchLife ? UI.afterMatchLife(sum) : '') +
         '<div class="panel"><h3>تقييمات اللاعبين</h3><div class="grid2">' + ratingList(0) + ratingList(1) + '</div></div>' +
         '<div class="cta"><button class="btn gold big" data-act="cont">متابعة</button></div>'
       );
@@ -406,6 +407,23 @@
     bind(el, p) {
       if (p.sum && p.sum.played && p.sum.rating >= 8) setTimeout(() => UI.confetti(80), 200);
       el.addEventListener('click', (ev) => {
+        // المقابلة والمنشور بعد المباراة
+        const lv = ev.target.closest('[data-iv],[data-post]');
+        if (lv && p.sum) {
+          const st = FC.State.cur;
+          if (lv.dataset.iv) {
+            p.sum.interviewAns = FC.Life.interview(st, lv.dataset.iv, p.sum.interview.q);
+            p.sum.interviewDone = true;
+          } else if (lv.dataset.post === 'skip') p.sum.posted = { skip: true };
+          else {
+            p.sum.posted = FC.Life.post(st, lv.dataset.post, p.sum.post);
+            if (p.sum.posted.trend) UI.confetti(50);
+          }
+          const y = window.scrollY;
+          UI.go('matchPost', { sum: p.sum });
+          setTimeout(() => window.scrollTo(0, y), 0);
+          return;
+        }
         const t = ev.target.closest('[data-act=cont]');
         if (!t) return;
         UI.match = null;

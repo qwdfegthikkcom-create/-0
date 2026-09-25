@@ -81,6 +81,7 @@
           const icon = { league: '🏆', cup: '🥇', cont: '⭐', nt: '🌍' };
           return '<div class="panel"><h3>خزانة الألقاب (' + T.length + ')</h3><div class="trophies">' + T.slice().reverse().map((t) => '<div class="trophy"><span class="tr-i">' + (icon[t.k] || '🏆') + '</span><b>' + esc(t.name) + '</b><small class="muted">' + FC.Calendar.seasonLabel(t.s) + (st.clubs[t.team] ? ' · ' + esc(st.clubs[t.team].short) : '') + '</small></div>').join('') + '</div></div>';
         })() +
+        (UI.rivalCard ? UI.rivalCard(st) : '') +
         '<div class="panel"><h3>السمات <small class="muted">(الأسهم = التغير منذ بداية الموسم، والمميزة ذهبياً تؤثر على تقييم مركزك)</small></h3><div class="attrs">' + attrHtml + '</div></div>' +
         (function () {
           const ih = (u.injHist || []).slice().reverse();

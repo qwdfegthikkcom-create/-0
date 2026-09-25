@@ -128,7 +128,23 @@ FC.Regens.retires = function (p, club, rng) {
   return r;
 };
 
+// الحياة خارج الملعب (المرحلة 5): عدّ الأحداث والأخبار وسجل الشهرة
+const lifeStats = { events: 0, news: 0, fame: [] };
+const origStartEv = FC.Life.startEvent;
+FC.Life.startEvent = function (st, rng, ev) {
+  lifeStats.events++;
+  return origStartEv.call(this, st, rng, ev);
+};
+const origNews = FC.Life.news;
+FC.Life.news = function (st, k, key, vars) {
+  lifeStats.news++;
+  return origNews.call(this, st, k, key, vars);
+};
+
 const careerLines = [];
+// أطول فترة بقيت فيها لاعباً حراً (بلا عقد)
+let faRun = 0;
+let faMax = 0;
 for (let s = 0; s < SEASONS; s++) {
   for (let w = 0; w < FC.Calendar.WEEKS; w++) {
     // قبل نهاية الموسم: جمع الهدافين
@@ -151,12 +167,15 @@ for (let s = 0; s < SEASONS; s++) {
         });
       });
       const u = state.user;
+      lifeStats.fame.push({ age: u.age, fame: u.fame, ovr: FC.Player.ovr(u), caps: u.intl ? u.intl.caps : 0 });
       careerLines.push({ season: state.season, age: u.age, team: u.team, club: state.clubs[FC.Game.userTeam(state)].name, ap: u.season.ap, st: u.season.st, g: u.season.g, a: u.season.a, avg: u.season.ap ? u.season.rs / u.season.ap : 0, ovr: FC.Player.ovr(u) });
     }
     // لا لاعب «غائب مع المنتخب» في بداية الموسم
     if (state.week === 0) for (const id in state.players) if (state.players[id].away) cupStats.awayLeft++;
     const t0 = process.hrtime.bigint();
     FC.Game.autoWeek(state);
+    faRun = state.user.freeAgent ? faRun + 1 : 0;
+    faMax = Math.max(faMax, faRun);
     const ms = Number(process.hrtime.bigint() - t0) / 1e6;
     if (ms > maxWeekMs && state.week !== 0) maxWeekMs = ms;
     sumWeekMs += ms;
@@ -210,6 +229,22 @@ check('مهاجم عادي (أهداف/موسم)', U.avg(avgStrikers), 8, 15, f1
   check('مباريات الحسم بركلات الترجيح', cupStats.pens / Math.max(1, cupStats.ko), 0.06, 0.25, pct);
   check('لاعبون عالقون «مع المنتخب» في بداية الموسم', cupStats.awayLeft, 0, 0, (x) => String(x));
 }
+// ====================== الحياة خارج الملعب ======================
+{
+  const L = FC.Life;
+  check('دخل الرعاية الأسبوعي عند شهرة 50', L.sponsorWeekly(50), 5000, 15000, (x) => FC.Econ.fmt(x));
+  check('دخل الرعاية الأسبوعي عند شهرة 80', L.sponsorWeekly(80), 50000, 150000, (x) => FC.Econ.fmt(x));
+  check('المتابعون عند شهرة 20', L.followersOf(20), 3000, 20000, (x) => L.fmtNum(x));
+  check('المتابعون عند شهرة 90', L.followersOf(90), 1e7, 1e8, (x) => L.fmtNum(x));
+  const peak = Math.max.apply(null, lifeStats.fame.map((f) => f.fame));
+  check('أعلى شهرة في المسيرة التلقائية', peak, 25, 100, f1, 'أعلى تقييم ' + f1(Math.max.apply(null, lifeStats.fame.map((f) => f.ovr))));
+  check('الأحداث العشوائية في الموسم', lifeStats.events / SEASONS, 3, 14, f1);
+  check('الأخبار المولّدة في الموسم', lifeStats.news / SEASONS, 15, 400, f1);
+  const R = state.rival;
+  const played = R ? R.hist.filter((h) => h.ap >= 15).length : 0;
+  check('الغريم يلعب بانتظام (مواسم بـ 15+ مباراة)', played, Math.min(10, SEASONS - 6), 99, (x) => String(x), R ? 'من ' + R.hist.length + ' موسماً' : 'لا غريم');
+  check('الأحداث المعلّقة لا تتراكم', state.user.event && state.user.event.exp < state.week - 4 ? 1 : 0, 0, 0, (x) => String(x));
+}
 check('أبطأ أسبوع محاكاة (ms)', maxWeekMs, 0, 300, f1, 'المتوسط ' + f1(sumWeekMs / weeks) + 'ms');
 const outfieldRet = retireAges.filter((r) => !r.gk).map((r) => r.age);
 const gkRet = retireAges.filter((r) => r.gk).map((r) => r.age);
@@ -250,7 +285,7 @@ FC.Status.banFor = origBan;
   const moves = (state.user.clubHist || []).map((h) => (state.clubs[h.club] ? state.clubs[h.club].short : '?') + '(' + h.type + ' ' + h.s + ')');
   console.log('  أنديتك: ' + moves.join(' ← '));
   check('رصيدك موجب بعد المسيرة التلقائية', state.user.money > 0 ? 1 : 0, 1, 1, (x) => (x ? 'نعم' : 'لا'), FC.Econ.fmt(state.user.money));
-  check('لديك عقد ساري (لست عالقاً كلاعب حر)', state.user.contract || state.user.retired ? 1 : 0, 1, 1, (x) => (x ? 'نعم' : 'لا'));
+  check('أطول فترة بلا عقد (أسابيع)', faMax, 0, 12, (x) => String(x), 'اللاعب الحر يجد نادياً سريعاً');
 }
 
 console.log('\nالأهداف لكل دوري:');

@@ -497,6 +497,11 @@
     addTrophy(state, c) {
       const u = state.user;
       (u.trophies = u.trophies || []).push({ s: state.season, id: c.id, k: c.kind, name: c.name, team: c.win });
+      if (FC.Life) {
+        const TF = FC.BAL.life.trophy;
+        FC.Life.addFame(state, c.id === 'WC' ? TF.WC : TF[c.kind] || TF.cup);
+        FC.Life.news(state, 'you', 'youTrophy', { p: FC.Player.displayName(u), c: c.name, t: state.clubs[c.win].short });
+      }
       const mult = BC().trophyWage[c.kind === 'cont' ? 'cont' : c.kind === 'cup' ? 'cup' : 'intl'] || 0;
       if (mult && u.contract && FC.Econ) FC.Econ.txn(state, u.contract.wage * mult, 'bonus', 'مكافأة الفوز بـ' + c.name);
     },

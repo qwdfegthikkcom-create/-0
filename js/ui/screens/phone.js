@@ -10,7 +10,7 @@
   const esc = U.esc;
   const money = (n) => FC.Econ.fmt(n);
 
-  // التطبيقات (تتوسع في المرحلة 5)
+  // التطبيقات (تطبيقات المرحلة 5 تُضاف عبر FC.PhoneApps)
   function apps(st) {
     const offers = FC.Transfer.active(st).length;
     const list = [
@@ -204,9 +204,11 @@
         if (m) m.read = true;
       }
       el.addEventListener('click', (ev) => {
-        const t = ev.target.closest('[data-app],[data-msg],[data-reply],[data-offer],[data-act],[data-hire]');
+        const t = ev.target.closest('[data-app],[data-msg],[data-reply],[data-offer],[data-act],[data-hire],[data-pa]');
         if (!t) return;
         if (FC.Sound) FC.Sound.click();
+        // تطبيقات المرحلة 5 (الأخبار، نبض، نمط الحياة، الرعاة)
+        if (t.dataset.pa && UI.phoneAct) return UI.phoneAct(st, t, p);
         if (t.dataset.reply) {
           ev.stopPropagation();
           const r = FC.Phone.reply(st, parseInt(t.dataset.mid, 10), t.dataset.reply);

@@ -29,7 +29,7 @@
         '<button class="btn big" data-go="saves">تحميل</button>' +
         '<button class="btn big ghost" data-go="settings">الإعدادات</button>' +
         '</div>' +
-        '<div class="menu-foot">المرحلة 3 + المباراة الكاملة ثلاثية الأبعاد</div>' +
+        '<div class="menu-foot">المرحلة 5: الكؤوس والمنتخبات والشهرة والحياة خارج الملعب</div>' +
         '</div>'
       );
     },

@@ -855,6 +855,7 @@
         kit: { mine: [mine.club.c1, mine.club.c2], opp: [theirs.club.c1, theirs.club.c2] },
         diff: state.diff,
         derby: m.derby,
+        calm: !!(FC.Life && FC.Life.has(state, 'mental')), // المدرب الذهني
         score: [m.sides[0].goals, m.sides[1].goals],
         teams: [m.sides[0].club.short, m.sides[1].club.short],
         seed: rng.int(1, 2147483646),

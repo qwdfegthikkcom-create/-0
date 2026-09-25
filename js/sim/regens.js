@@ -28,8 +28,11 @@
         const club = state.clubs[id];
         if (club.youth || club.nt) continue;
         const L = FC.Cups ? FC.Cups.leagueFor(state, club) : state.leagues[club.lg];
+        const rv = state.rival ? state.rival.pid : -1;
         club.squad = club.squad.filter((pid) => {
           const p = state.players[pid];
+          // الغريم يكمل مسيرته حتى 35 على الأقل
+          if (pid === rv && p.age < 35) return true;
           if (R.retires(p, club, rng)) {
             delete state.players[pid];
             retired++;
@@ -39,7 +42,7 @@
         });
         // تقليص التشكيلة الزائدة (يغادر الأضعف والأكبر)
         while (club.squad.length > BW.squadMax) {
-          const worst = club.squad.map((pid) => state.players[pid]).sort((a, b) => a.ovr - a.age * 0.3 - (b.ovr - b.age * 0.3))[0];
+          const worst = club.squad.map((pid) => state.players[pid]).filter((p) => p.id !== rv).sort((a, b) => a.ovr - a.age * 0.3 - (b.ovr - b.age * 0.3))[0];
           club.squad.splice(club.squad.indexOf(worst.id), 1);
           delete state.players[worst.id];
         }

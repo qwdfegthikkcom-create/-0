@@ -377,6 +377,10 @@
       FC.World.assignNumbers(state, club, rng);
       Tr.logUser(state, oldId, o);
       FC.Msg.add(state, 'club', 'مرحباً بك في ' + club.name, FC.TXT.msg(rng, 'transferDone', { c: club.name, n: u.num, f: o.fee ? FC.Econ.fmt(o.fee) : 'انتقال حر', r: ROLE_NAME[o.role] }), { big: 'transfer' });
+      if (FC.Life) {
+        FC.Life.news(state, 'you', 'youTransfer', { p: FC.Player.displayName(u), t: club.name });
+        FC.Life.addFame(state, 0.5 + (o.fee || 0) / 2e7);
+      }
       if (old && club.lg !== old.lg && state.leagues[club.lg] && state.leagues[club.lg].nat !== u.nat) {
         u.abroad = { s: state.season, w: state.week }; // الغربة (تُستخدم في أحداث المرحلة 5)
       }
@@ -602,7 +606,8 @@
 
     // تسريح الأضعف (الأكبر سناً) عند زيادة التشكيلة
     releaseWorst(state, club) {
-      const worst = club.squad.map((id) => state.players[id]).sort((a, b) => a.ovr - a.age * 0.3 - (b.ovr - b.age * 0.3))[0];
+      const rv = state.rival ? state.rival.pid : -1;
+      const worst = club.squad.map((id) => state.players[id]).filter((p) => p.id !== rv).sort((a, b) => a.ovr - a.age * 0.3 - (b.ovr - b.age * 0.3))[0];
       if (!worst) return;
       club.squad.splice(club.squad.indexOf(worst.id), 1);
       delete state.players[worst.id];

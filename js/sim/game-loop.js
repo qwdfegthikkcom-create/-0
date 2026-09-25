@@ -39,6 +39,8 @@
       FC.Msg.add(state, 'academy', 'مرحباً بك في الأكاديمية', FC.TXT.msg(rng, 'welcome', { c: club.name, city: state.user.city }));
       const pr = FC.Player.potRange(state, state.user);
       FC.Msg.add(state, 'scout', 'تقرير الكشافين', FC.TXT.msg(rng, 'scout', { lo: pr[0], hi: pr[1] }));
+      // الشهرة والغريم وبقية الحياة خارج الملعب
+      if (FC.Life) FC.Life.ensure(state);
       return state;
     },
 
@@ -167,10 +169,15 @@
         } else if (it.k === 'family') {
           u.morale = U.clamp(u.morale + W.family.morale, 0, 100);
           u.fit = U.clamp(u.fit + W.family.fit, 0, 100);
+        } else if (it.k === 'media') {
+          // حدث إعلامي أو إعلاني: مال + شهرة
+          u.fit = U.clamp(u.fit + W.media.fit, 0, 100);
+          wk.mediaPay = FC.Life ? FC.Life.media(state) : 0;
         }
         done.push(it);
       });
       wk.plan = done;
+      if (FC.Life && FC.Life.has(state, 'mental')) wk.mental = true; // المدرب الذهني: تطور السمات الذهنية
       wk.energy = energy;
       wk.planned = true;
       return done;
@@ -335,10 +342,12 @@
       state.wk.last = summary;
       // نتيجة المواجهة في الكأس (تأهلت أو خرجت)
       if (kind !== 'lg') summary.tie = Game.tieOutcome(state, m.ref, S.id);
+      // الشهرة والأخبار والمنشور والمقابلة
+      if (FC.Life) FC.Life.afterMatch(state, m, summary);
       // بقية مباريات اليوم في العالم، ثم استعداد لمباراة منتصف الأسبوع إن وجدت
       Game.playDay(state, m.ref && m.ref.d != null ? m.ref.d : 0);
       const next = Game.userFixtureRef(state);
-      if (next) u.fit = Math.min(BS.fitCap, u.fit + FC.BAL.cups.midRecover);
+      if (next) u.fit = Math.min(BS.fitCap, u.fit + FC.BAL.cups.midRecover + (FC.Life && FC.Life.has(state, 'nutri') ? FC.BAL.life.nutriMid : 0));
       state.wk.played = !next;
       return summary;
     },
@@ -389,7 +398,7 @@
       u.lastUps = rep.ups;
       // الاستشفاء والمعنويات للأسبوع القادم
       const BS = FC.BAL.status;
-      u.fit = Math.min(BS.fitCap, u.fit + BS.fitWeekly);
+      u.fit = Math.min(BS.fitCap, u.fit + BS.fitWeekly + (FC.Life && FC.Life.has(state, 'nutri') ? FC.BAL.life.nutriFit : 0));
       // الإصابات والجاهزية ولاعبو الذكاء الاصطناعي
       FC.Status.sharpWeekly(state);
       FC.Status.weeklyUser(state, rng);
@@ -399,6 +408,8 @@
       // المال والانتقالات
       FC.Econ.weekly(state);
       FC.Transfer.weekly(state, rng);
+      // الحياة خارج الملعب: الرعاة، الخدمات، الأحداث، الأخبار، الغربة
+      if (FC.Life) FC.Life.weekly(state, rng, rep);
       u.morale += u.morale > BS.moraleMid ? -BS.moraleDrift : u.morale < BS.moraleMid ? BS.moraleDrift : 0;
       // التصعيد
       if (u.team === 'Y') Game.checkPromotion(state, rep);
@@ -435,6 +446,7 @@
     // أسبوع كامل تلقائي (للمحاكاة السريعة والاختبار)
     autoWeek(state) {
       FC.Transfer.autoDecide(state, FC.rngOf(state));
+      if (FC.Life) FC.Life.autoDecide(state);
       if (!state.wk.planned) Game.applyPlan(state, Game.autoPlan(state));
       let guard = 0;
       while (Game.userFixtureRef(state) && guard++ < 4) Game.simUserMatchAuto(state);
@@ -495,6 +507,7 @@
             FC.Msg.add(state, 'club', 'أبطال!', FC.TXT.msg(rng, 'userChampion', { l: L.name, c: state.clubs[champ].name }), { big: 'champion' });
             if (!L.youth) {
               (u.trophies = u.trophies || []).push({ s: state.season, id: 'LG_' + id, k: 'league', name: L.name, team: champ });
+              if (FC.Life) FC.Life.addFame(state, FC.BAL.life.trophy.league * FC.Life.visF(state));
               if (u.contract) FC.Econ.txn(state, u.contract.wage * FC.BAL.cups.trophyWage.league, 'bonus', 'مكافأة الفوز بالدوري');
             }
           }
@@ -533,6 +546,7 @@
       const u = state.user;
       // تطور لاعبي الذكاء الاصطناعي وأعمارهم
       if (FC.Cups) FC.Cups.archive(state);
+      if (FC.Life) FC.Life.rivalSeason(state);
       for (const id in state.players) {
         const p = state.players[id];
         const club = state.clubs[p.club];
@@ -572,6 +586,10 @@
       FC.Transfer.rollover(state, rng);
       FC.Comp.newSeason(state);
       if (FC.Cups) FC.Cups.newSeason(state);
+      if (FC.Life) {
+        FC.Life.rivalMove(state, rng);
+        FC.Life.newSeason(state);
+      }
       FC.Msg.add(state, 'club', 'موسم جديد', FC.TXT.msg(rng, 'newSeason', { s: FC.Calendar.seasonLabel(state.season), age: u.age }));
       FC.Status.captainReview(state, rng);
       const pr = FC.Player.potRange(state, u);

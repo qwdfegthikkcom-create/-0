@@ -70,6 +70,8 @@
       s += (isUser ? (p.intl ? p.intl.caps : 0) : p.iC || 0) * B.capsW;
       if (club && club.youth) s -= B.youthPenalty;
       if (isUser && p.freeAgent) s -= 2;
+      // الشهرة تساعد قليلاً (لاعبك فقط؛ لاعبو الذكاء الاصطناعي بلا شهرة محسوبة)
+      if (isUser && p.fame) s += p.fame * B.fameW;
       return s;
     },
 
@@ -347,6 +349,10 @@
       const fx = (state.fx || []).filter((f) => (f.h === my || f.a === my) && f.w === week && f.hg < 0);
       if (calledMe) {
         u.intl.calls++;
+        if (FC.Life) {
+          FC.Life.addFame(state, FC.BAL.life.natCall * (u.intl.calls === 1 ? 2 : 1));
+          if (u.intl.calls === 1) FC.Life.news(state, 'intl', 'youCall', { p: FC.Player.displayName(u), t: club.short });
+        }
         const opp = fx.map((f) => state.clubs[f.h === my ? f.a : f.h].short).join(' و');
         const first = u.intl.calls === 1;
         FC.Msg.add(state, 'nat', first ? 'أول استدعاء دولي!' : 'استدعاء للمنتخب', FC.TXT.msg(rng, first ? 'ntFirstCall' : 'ntCall', { t: club.short, o: opp || 'مباريات ودية', co: FC.Status.coachName(club.coach) }), first ? { big: 'ntcall' } : null);
