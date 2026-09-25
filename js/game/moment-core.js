@@ -1234,7 +1234,7 @@
   }
 
   const Moment = (FC.Moment = {
-    create, step, predict, crossing, GX, L, W, POST, BAR,
+    create, step, predict, crossing, ballPhys, GX, L, W, POST, BAR,
 
     // السحب من الكرة: الاتجاه (زاوية بالراديان على الملعب) والقوة 0..1
     inputKick(sc, ang, power) {

@@ -6,6 +6,7 @@
   const FC = G.FC = G.FC || {};
   let ctx = null;
   let noiseBuf = null;
+  let amb = null; // صوت المدرجات المستمر
 
   function ac() {
     if (!FC.Sound.enabled) return null;
@@ -111,6 +112,40 @@
       const c = ac();
       if (!c) return;
       crowd(c, 0.4, 0.12, 2400);
+    },
+    // ضجيج المدرجات المستمر أثناء المباراة الكاملة (level 0..1، أو 0 للإيقاف)
+    ambient(level) {
+      const c = ac();
+      if (!c) return;
+      if (!amb) {
+        if (!level) return;
+        const src = c.createBufferSource();
+        src.buffer = noise(c);
+        src.loop = true;
+        const f = c.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.value = 520;
+        f.Q.value = 0.45;
+        const g = c.createGain();
+        g.gain.value = 0.0001;
+        src.connect(f).connect(g).connect(c.destination);
+        src.start();
+        amb = { src, g };
+      }
+      const t = c.currentTime;
+      amb.g.gain.cancelScheduledValues(t);
+      amb.g.gain.setTargetAtTime(Math.max(0.0001, (level || 0) * 0.05), t, 0.4);
+      if (!level) {
+        const a = amb;
+        amb = null;
+        setTimeout(() => {
+          try {
+            a.src.stop();
+          } catch (e) {
+            /* تجاهل */
+          }
+        }, 1500);
+      }
     },
     // نقرة الأزرار
     click() {

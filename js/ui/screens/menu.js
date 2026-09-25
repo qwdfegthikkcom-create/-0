@@ -29,7 +29,7 @@
         '<button class="btn big" data-go="saves">تحميل</button>' +
         '<button class="btn big ghost" data-go="settings">الإعدادات</button>' +
         '</div>' +
-        '<div class="menu-foot">المرحلة 1 · نسخة أولى قابلة للعب</div>' +
+        '<div class="menu-foot">المرحلة 1 + المباراة الكاملة ثلاثية الأبعاد</div>' +
         '</div>'
       );
     },

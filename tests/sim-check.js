@@ -235,6 +235,99 @@ if (FC.Moment && FC.Moment.selfTest) {
 skip('تحويل ركلات الجزاء (75–80%)', 'المرحلة 2');
 skip('تحويل الرأسيات (10–20%)', 'المرحلة 2');
 
+// ====================== 3ب) المباراة الكاملة (تتحكم بلاعبك) ======================
+console.log('\n=== المباراة الكاملة: 22 لاعباً بذكاء اصطناعي، لاعبك تلقائي ===');
+if (FC.Full) {
+  const fs0 = FC.Game.newCareer({ fn: 'سامي', ln: 'نوري', nat: 'IRQ', city: 'البصرة', pos: 'ST', foot: 'R', ht: 180, wt: 74, face: {}, diff: 'real', seed: 4242 });
+  const want = QUICK ? 8 : 20;
+  const F = { n: 0, goals: 0, sh: 0, sot: 0, pas: 0, pasOk: 0, yc: 0, rc: 0, ms: 0, userR: [], aiR: [], consistent: 0 };
+  for (let g = 0; g < 400 && F.n < want; g++) {
+    if (FC.Game.userFixtureRef(fs0) && !fs0.wk.played) {
+      const m = FC.Game.startMatch(fs0, 'full');
+      if (m.user && m.user.state === 'on') {
+        const t0 = Date.now();
+        const fm = FC.Full.create(fs0, m, { auto: true, length: FC.BAL.full.defaultLength });
+        FC.Full.runHeadless(fm, 1 / 30);
+        F.ms += Date.now() - t0;
+        FC.Full.writeBack(fm, true);
+        const sum = FC.Game.completeMatch(fs0, m);
+        F.n++;
+        F.goals += m.sides[0].goals + m.sides[1].goals;
+        fm.teams.forEach((T) => {
+          F.sh += T.st.sh;
+          F.sot += T.st.sot;
+          F.pas += T.st.pas;
+          F.pasOk += T.st.pasOk;
+        });
+        fm.all.forEach((e) => {
+          F.yc += e.st.yc;
+          F.rc += e.st.rc;
+        });
+        if (sum.rating != null) F.userR.push(sum.rating);
+        m.sides.forEach((S) => S.all.forEach((x) => x.pid !== 0 && x.start && F.aiR.push(x.rt)));
+        // الأهداف المسجلة للاعبين = نتيجة المباراة (باستثناء الأهداف العكسية)
+        const ok = m.sides.every((S, i) => U.sum(S.all, (x) => x.g) <= S.goals && S.goals === fm.teams[i].score);
+        if (ok) F.consistent++;
+      }
+    }
+    FC.Game.endWeek(fs0);
+  }
+  const n = F.n || 1;
+  check('المباراة الكاملة: متوسط الأهداف', F.goals / n, 1.8, 3.6, f2, 'عينة ' + F.n + ' مباراة');
+  check('المباراة الكاملة: تسديدات الفريق', F.sh / n / 2, 5, 14, f1);
+  check('المباراة الكاملة: نسبة التسديد على المرمى', F.sot / Math.max(1, F.sh), 0.3, 0.66, pct);
+  check('المباراة الكاملة: دقة التمرير', F.pasOk / Math.max(1, F.pas), 0.6, 0.9, pct);
+  check('المباراة الكاملة: البطاقات الصفراء', F.yc / n, 0.5, 4.5, f2);
+  check('المباراة الكاملة: متوسط تقييمك (تلقائي)', U.avg(F.userR), 5.8, 7.8, f2);
+  check('المباراة الكاملة: متوسط تقييم الأساسيين', U.avg(F.aiR), 6.4, 7.2, f2);
+  check('المباراة الكاملة: تطابق الأهداف والنتيجة', F.consistent / n, 1, 1, pct);
+  check('المباراة الكاملة: زمن محاكاة المباراة (ms)', F.ms / n, 0, 3000, f1);
+  // عبث بالتحكم: مدخلات عشوائية لحارس ومهاجم دون أخطاء
+  let fuzzOk = 0;
+  ['ST', 'GK'].forEach((pos, k) => {
+    const st2 = FC.Game.newCareer({ fn: 'x', ln: 'y', nat: 'IRQ', city: '', pos, foot: 'R', ht: 185, wt: 78, face: {}, diff: 'real', seed: 77 + k });
+    for (let g = 0; g < 60; g++) {
+      const ref = FC.Game.userFixtureRef(st2);
+      if (ref && !st2.wk.played) {
+        // نضمن أن لاعبك أساسي في مركزه (للاختبار فقط)
+        const club = FC.Game.userTeam(st2);
+        const pk = FC.Select.pick(st2, club, FC.rngOf(st2));
+        if (!pk.xi.some((x) => x.pid === 0)) {
+          pk.bench = pk.bench.filter((id) => id !== 0);
+          const slotI = pk.xi.findIndex((x) => FC.Player.POS[x.slot].role === FC.Player.POS[pos].role);
+          pk.bench.push(pk.xi[slotI].pid);
+          pk.xi[slotI] = { pid: 0, slot: pk.xi[slotI].slot };
+        }
+        const m = FC.Match.create(st2, ref.home, ref.away, ref, { live: true, mode: 'full', pickH: ref.home === club ? pk : null, pickA: ref.away === club ? pk : null });
+        if (m.user && m.user.state === 'on') {
+          try {
+            const fm = FC.Full.create(st2, m, { auto: false, length: 6 });
+            const r = new FC.RNG(9);
+            const acts = ['pass', 'through', 'lob', 'shootStart', 'shootEnd', 'tackle', 'slide', 'dive'];
+            let i = 0;
+            while (!fm.over && i++ < 60000) {
+              if (i % 15 === 0) {
+                const a = r.float(0, 6.3);
+                FC.Full.setInput(fm, Math.cos(a), Math.sin(a), r.chance(0.2) ? 0 : 1, r.chance(0.3));
+              }
+              if (i % 20 === 0) FC.Full.act(fm, acts[r.int(0, acts.length - 1)]);
+              FC.Full.step(fm, 1 / 60);
+            }
+            FC.Full.writeBack(fm, true);
+            FC.Game.completeMatch(st2, m);
+            if (fm.over) fuzzOk++;
+          } catch (e) {
+            console.log('  خطأ في العبث: ' + e.stack);
+          }
+          break;
+        }
+      }
+      FC.Game.endWeek(st2);
+    }
+  });
+  check('المباراة الكاملة: مدخلات عشوائية (مهاجم وحارس) بلا أخطاء', fuzzOk, 2, 2, (v) => String(v));
+} else skip('المباراة الكاملة', 'غير محمّلة');
+
 // ====================== 4) مسيرة كاملة تلقائية ======================
 console.log('\n=== مسيرتك في وضع اللعب التلقائي ===');
 console.log('  الموسم   العمر  الفريق                     م   أس  هـ  ص  تقييم  OVR');

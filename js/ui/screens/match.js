@@ -54,7 +54,9 @@
       const role = FC.Player.POS[st.user.pos].role;
       const instr = FC.TXT.INSTR[role][st.week % FC.TXT.INSTR[role].length];
       const status = u.state === 'on' ? 'start' : u.state === 'bench' ? 'bench' : 'out';
-      const modeName = { play: 'لعب اللحظات', mixed: 'مختلط (اللحظات الكبرى فقط)', auto: 'تلقائي' }[settings.matchMode];
+      const modeName = { full: 'مباراة كاملة (تتحكم بلاعبك)', play: 'لعب اللحظات', mixed: 'مختلط (اللحظات الكبرى فقط)', auto: 'تلقائي' }[settings.matchMode];
+      const full = settings.matchMode === 'full';
+      const lens = FC.BAL.full.lengths;
       return (
         '<div class="pre-head panel">' +
         '<div class="muted">' + esc(L.name) + ' · الجولة ' + (ref.r + 1) + ' · ' + esc(UI.date(st)) + (m.derby ? ' · <b class="gold-text">ديربي!</b>' : '') + '</div>' +
@@ -73,6 +75,9 @@
         (top ? '<div class="kv"><span>هدافهم</span><b>' + esc(FC.Player.fullName(st.players[top.pid] || st.user)) + ' (' + top.v + ')</b></div>' : '') +
         (status !== 'out' ? '<div class="instr">📋 تعليمات المدرب لك: <b>«' + esc(instr) + '»</b></div>' : '') +
         '<p class="muted small">وضع المباراة: ' + modeName + ' (يُغيَّر من الإعدادات)</p>' +
+        (full
+          ? '<div class="len-row"><span>مدة المباراة</span><div class="seg-btns">' + lens.map((n) => '<button class="' + (settings.fullLength === n ? 'on' : '') + '" data-len="' + n + '">' + n + ' د</button>').join('') + '</div></div>'
+          : '') +
         '</div></div>' +
         '<div class="cta">' +
         (status !== 'out' ? '<button class="btn gold big" data-act="live">' + UI.icon('whistle') + ' ابدأ المباراة</button><button class="btn ghost" data-act="quick">' + UI.icon('fast') + ' محاكاة سريعة</button>' : '<button class="btn gold big" data-act="live">تابع من المدرجات</button><button class="btn ghost" data-act="quick">النتيجة مباشرة</button>') +
@@ -81,9 +86,16 @@
     },
     bind(el) {
       el.addEventListener('click', (ev) => {
+        const ln = ev.target.closest('[data-len]');
+        if (ln) {
+          settings.fullLength = parseInt(ln.dataset.len, 10);
+          FC.Save.saveSettings(settings);
+          el.querySelectorAll('[data-len]').forEach((b) => b.classList.toggle('on', b === ln));
+          return;
+        }
         const t = ev.target.closest('[data-act]');
         if (!t || !UI.match) return;
-        if (t.dataset.act === 'live') UI.go('matchLive');
+        if (t.dataset.act === 'live') UI.go(settings.matchMode === 'full' ? 'matchFull' : 'matchLive');
         if (t.dataset.act === 'quick') {
           const st = FC.State.cur;
           const m = UI.match;
@@ -103,6 +115,26 @@
     const m = UI.match;
     const sum = FC.Game.completeMatch(st, m);
     UI.go('matchPost', { sum });
+  };
+
+  // ================= المباراة الكاملة (تتحكم بلاعبك طوال المباراة) =================
+  UI.screens.matchFull = {
+    chrome: false,
+    render() {
+      if (!UI.match) return '<div class="page"><button class="btn" data-go="home">الرئيسية</button></div>';
+      return '<div class="page center"><p class="muted">جارٍ تجهيز الملعب…</p></div>';
+    },
+    bind() {
+      const st = FC.State.cur;
+      const m = UI.match;
+      if (!m) return;
+      settings = FC.Save.loadSettings();
+      FC.FullView.start(document.body, st, m, { length: settings.fullLength, cam: settings.cam, assist: settings.assist !== false }).then((r) => {
+        // محاكاة البقية بمحرك الإحصاء من الدقيقة الحالية
+        if (r.how === 'sim' && !m.done) FC.Match.run(st, m);
+        UI.finishMatch();
+      });
+    },
   };
 
   // ================= المباراة المباشرة =================

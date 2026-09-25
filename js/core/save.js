@@ -280,6 +280,11 @@
       const def = FC.util.clone(FC.BAL.ui.defaultSettings);
       try {
         const s = JSON.parse(G.localStorage.getItem(LS_PREFIX + 'settings') || '{}');
+        // ترقية الإعدادات القديمة: المباراة الكاملة هي الوضع الجديد الافتراضي
+        if (s.matchMode && !s.v) {
+          s.matchMode = 'full';
+          s.v = 2;
+        }
         return Object.assign(def, s);
       } catch (e) {
         return def;

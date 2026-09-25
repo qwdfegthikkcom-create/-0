@@ -806,10 +806,12 @@
         if (O.goals === 0 && mins >= 60) r += BR.cleanSheet;
         else r += BR.conceded * Math.max(0, O.goals - 1) * share;
       }
-      if (x.role === 'GK') r += x.sv * BR.save + x.bsv * (BR.bigSave - BR.save);
+      if (x.role === 'GK' && x.rtAdd == null) r += x.sv * BR.save + x.bsv * (BR.bigSave - BR.save);
       r += (x.eff - avgEff) * BR.quality;
       r += x.yc * BR.yellow + x.rc * BR.red;
-      r += rng.normal(0, BR.noise * (share < 0.35 ? 0.6 : 1));
+      // أحداث المباراة الكاملة (إن لُعبت): تمريرات، افتكاك، تصديات… فتقل العشوائية
+      if (x.rtAdd != null) r += x.rtAdd;
+      r += rng.normal(0, BR.noise * (share < 0.35 ? 0.6 : 1) * (x.rtAdd != null ? 0.75 : 1));
       return U.clamp(Math.round(r * 10) / 10, BR.min, BR.max);
     },
 
