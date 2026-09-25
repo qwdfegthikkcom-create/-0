@@ -79,14 +79,16 @@
       return (W[item.k] && W[item.k].energy) || 0;
     },
 
-    // خطة تلقائية حسب مركزك
+    // خطة تلقائية حسب مركزك (والمصاب: علاج طبيعي وراحة)
     autoPlan(state) {
+      if (state.user.inj) return [{ k: 'physio' }, { k: 'rest' }, { k: 'video' }];
       const role = FC.Player.POS[state.user.pos].role;
       return DEFAULT_TRAIN[role].map((g) => ({ k: 'train', g, int: 'mid', mult: null }));
     },
 
-    // تطبيق خطة الأسبوع: items = [{k:'train', g, int, mult}, {k:'rest'}, {k:'video'}, {k:'family'}]
+    // تطبيق خطة الأسبوع: items = [{k:'train', g, int, mult}, {k:'physio'}, {k:'rest'}, {k:'video'}, {k:'family'}]
     applyPlan(state, items) {
+      const rng = FC.rngOf(state);
       const W = FC.BAL.week;
       const BG = FC.BAL.growth;
       const u = state.user;
@@ -96,18 +98,24 @@
       items.slice(0, W.maxActivities).forEach((it) => {
         const cost = Game.activityCost(it);
         if (cost > energy) return;
+        if (it.k === 'train' && u.inj) return; // المصاب لا يتدرب
         energy -= cost;
         if (it.k === 'train') {
           const m = (it.mult != null ? it.mult : BG.autoTrain) * BG.intensity[it.int || 'mid'];
           wk.tm[it.g] = Math.max(wk.tm[it.g] || 0, m);
           u.fit = U.clamp(u.fit + W.train[it.int || 'mid'].fit, 0, 100);
-          if (it.int === 'hard') u.trust = U.clamp(u.trust + 1, 0, 100);
+          if (it.int === 'hard') FC.Status.trust(state, 1, 'train');
+          // خطر الإصابة في التدريب (المكثف مع التعب أخطر)
+          FC.Status.trainingRisk(state, rng, it.int || 'mid');
+        } else if (it.k === 'physio') {
+          wk.physio = true;
+          u.fit = U.clamp(u.fit + W.physio.fit, 0, 100);
         } else if (it.k === 'rest') {
           u.fit = U.clamp(u.fit + W.rest.fit, 0, 100);
           u.morale = U.clamp(u.morale + W.rest.morale, 0, 100);
         } else if (it.k === 'video') {
           wk.video = true;
-          u.trust = U.clamp(u.trust + W.video.trust, 0, 100);
+          FC.Status.trust(state, W.video.trust, 'train');
         } else if (it.k === 'family') {
           u.morale = U.clamp(u.morale + W.family.morale, 0, 100);
           u.fit = U.clamp(u.fit + W.family.fit, 0, 100);
@@ -189,7 +197,8 @@
         u.fit = Math.round(mu.fit);
         u.minHist.push(mins / 90);
         u.morale = U.clamp(u.morale + 1 + (r >= 7.5 ? 2 : r <= 5.5 ? -2 : 0), 0, 100);
-        u.trust = U.clamp(u.trust + U.clamp((r - 6.6) * 3, -4, 5), 0, 100);
+        FC.Status.trust(state, U.clamp((r - 6.6) * 3, -4, 5), 'perf');
+        FC.Status.sharpAfterMatch(u, mins);
         summary.played = true;
         summary.rating = r;
         summary.userStats = st;
@@ -203,6 +212,8 @@
         u.morale = U.clamp(u.morale - (summary.role === 'bench' ? 2 : 3), 0, 100);
       }
       if (u.minHist.length > FC.BAL.growth.minutesWindow) u.minHist.shift();
+      // الإيقافات (البطاقات) بعد المباراة
+      FC.Status.afterMatchUser(state, m, rng);
       u.log.push({ w: state.week, lg: summary.lg, opp: S === m.sides[0] ? m.sides[1].id : m.sides[0].id, h: si === 0, gf, ga, r: summary.rating, g: summary.userStats ? summary.userStats.g : 0, a: summary.userStats ? summary.userStats.a : 0, mn: summary.userStats ? summary.userStats.mn : 0 });
       state.wk.played = true;
       state.wk.last = summary;
@@ -242,6 +253,12 @@
       // الاستشفاء والمعنويات للأسبوع القادم
       const BS = FC.BAL.status;
       u.fit = Math.min(BS.fitCap, u.fit + BS.fitWeekly);
+      // الإصابات والجاهزية ولاعبو الذكاء الاصطناعي
+      FC.Status.sharpWeekly(state);
+      FC.Status.weeklyUser(state, rng);
+      FC.Status.weeklyAI(state);
+      FC.Status.coachReview(state, rng);
+      if (state.week === FC.BAL.coach.captainWeek) FC.Status.captainReview(state, rng);
       u.morale += u.morale > BS.moraleMid ? -BS.moraleDrift : u.morale < BS.moraleMid ? BS.moraleDrift : 0;
       // التصعيد
       if (u.team === 'Y') Game.checkPromotion(state, rep);
@@ -303,6 +320,7 @@
       FC.World.assignNumbers(state, club, rng);
       u.trust = FC.BAL.status.trustStart;
       FC.Msg.add(state, 'club', 'تصعيد إلى الفريق الأول!', FC.TXT.msg(rng, 'promotion', { c: club.name, n: u.num }), { big: 'promotion' });
+      FC.Status.captainReview(state, rng);
       if (rep) rep.promoted = true;
     },
 
@@ -362,6 +380,7 @@
       u.luck = rng.next();
       u.seasonStartAttrs = U.clone(u.attrs);
       u.fit = 100;
+      FC.Status.newSeason(state);
       // دوري الشباب
       if (u.team === 'Y' && u.age >= FC.BAL.promote.autoAge) Game.promote(state, rep);
       if (u.team === 'Y') FC.Regens.refreshYouth(state, rng);
@@ -376,6 +395,7 @@
       state.week = 0;
       FC.Comp.newSeason(state);
       FC.Msg.add(state, 'club', 'موسم جديد', FC.TXT.msg(rng, 'newSeason', { s: FC.Calendar.seasonLabel(state.season), age: u.age }));
+      FC.Status.captainReview(state, rng);
       const pr = FC.Player.potRange(state, u);
       FC.Msg.add(state, 'scout', 'تقرير الكشافين', FC.TXT.msg(rng, 'scout', { lo: pr[0], hi: pr[1] }));
     },

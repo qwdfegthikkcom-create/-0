@@ -80,6 +80,27 @@ function leagueLevel(lg) {
 }
 FC.DATA.leagueOrder.forEach((lg) => (leagueStart[lg] = leagueLevel(lg)));
 
+// تسجيل الإصابات والإيقافات
+const injStats = { ai: 0, days: 0, user: 0, bans: 0 };
+const origInjAI = FC.Status.injureAI;
+FC.Status.injureAI = function (p, rng) {
+  const inj = origInjAI.call(this, p, rng);
+  injStats.ai++;
+  injStats.days += inj.days;
+  return inj;
+};
+const origInjUser = FC.Status.injureUser;
+FC.Status.injureUser = function (st, rng, where) {
+  injStats.user++;
+  return origInjUser.call(this, st, rng, where);
+};
+const origBan = FC.Status.banFor;
+FC.Status.banFor = function (rng, x, prev) {
+  const b = origBan.call(this, rng, x, prev);
+  if (b) injStats.bans++;
+  return b;
+};
+
 // تسجيل أعمار المعتزلين
 const origRetires = FC.Regens.retires;
 FC.Regens.retires = function (p, club, rng) {
@@ -150,7 +171,13 @@ if (gkRet.length) check('متوسط عمر اعتزال الحراس', U.avg(gkR
 let drift = 0;
 FC.DATA.leagueOrder.forEach((lg) => (drift = Math.max(drift, Math.abs(leagueLevel(lg) - leagueStart[lg]))));
 check('ثبات مستوى الدوريات (أكبر انحراف)', drift, 0, 3.5, f2, 'مستوى أفضل 11 بين أول وآخر موسم');
-skip('معدل الإصابات', 'المرحلة 2');
+check('الإصابات لكل فريق في المباراة', injStats.ai / (stats.matches * 2), 0.18, 0.5, f2, 'متوسط الغياب ' + f1(injStats.days / Math.max(1, injStats.ai)) + ' يوماً');
+check('متوسط مدة الإصابة (أيام)', injStats.days / Math.max(1, injStats.ai), 10, 35, f1);
+check('إصاباتك في الموسم (مسيرة تلقائية)', injStats.user / SEASONS, 0.3, 3, f2);
+check('الإيقافات لكل فريق في الموسم', injStats.bans / (stats.matches * 2 / 34), 3, 14, f1, 'تقريبي لـ 34 مباراة');
+FC.Status.injureAI = origInjAI;
+FC.Status.injureUser = origInjUser;
+FC.Status.banFor = origBan;
 skip('عينات القيم السوقية', 'المرحلة 3');
 
 console.log('\nالأهداف لكل دوري:');

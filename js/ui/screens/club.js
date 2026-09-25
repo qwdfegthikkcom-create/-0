@@ -14,9 +14,11 @@
     const me = p.id === 0;
     const ovr = Math.floor(FC.Player.ovr(p));
     const form = me ? (p.form.length ? U.round1(FC.Player.formOf(p)) : null) : p.sAp ? U.round1(p.sRs / p.sAp) : null;
+    const club = st.clubs[clubId];
+    const tags = (club && club.capt === p.id && !club.youth ? ' <span class="p-tag cap" title="القائد">©</span>' : '') + ((me ? p.inj : p.inj > 0) ? ' <span class="p-tag" title="مصاب">🚑</span>' : '') + (p.ban > 0 ? ' <span class="p-tag" title="موقوف">🟥</span>' : '');
     return (
       '<tr class="' + (me ? 'me' : '') + '"><td class="num">' + (p.num || '') + '</td>' +
-      '<td class="l">' + UI.flag(p.nat, 11) + ' ' + esc(me ? FC.Player.displayName(p) : p.fn + ' ' + p.ln) + '</td>' +
+      '<td class="l">' + UI.flag(p.nat, 11) + ' ' + esc(me ? FC.Player.displayName(p) : p.fn + ' ' + p.ln) + tags + '</td>' +
       '<td>' + esc(FC.Player.POS[p.pos].short) + '</td><td>' + p.age + '</td>' +
       '<td><b class="ovr ovr-' + FC.Player.tier(ovr) + '">' + ovr + '</b></td>' +
       '<td>' + (me ? p.season.ap : p.sAp) + '</td><td>' + (me ? p.season.g : p.sG) + '</td><td>' + UI.rating(form) + '</td></tr>'
@@ -35,13 +37,15 @@
       const tabs = [['squad', 'التشكيلة'], ['tactic', 'الخطة'], ['fix', 'المباريات'], ['info', 'النادي']];
       let body = '';
       if (tab === 'squad') {
-        const ids = FC.Select.squadIds(st, teamId);
+        const ids = FC.Select.squadIds(st, teamId, true);
         const players = ids.map((id) => FC.getP(st, id));
+        const out = players.filter((q) => (q.id === 0 ? q.inj : q.inj > 0) || q.ban > 0);
+        if (out.length) body += '<div class="panel"><h3>الغيابات</h3><div class="absent">' + out.map((q) => '<span>' + ((q.id === 0 ? q.inj : q.inj > 0) ? '🚑' : '🟥') + ' ' + esc(q.id === 0 ? FC.Player.displayName(q) : q.ln) + (q.id === 0 && q.inj ? ' <small class="muted">(' + esc(q.inj.name) + ')</small>' : q.id !== 0 && q.inj > 0 ? ' <small class="muted">(' + q.inj + ' أسبوع)</small>' : q.ban > 0 ? ' <small class="muted">(' + q.ban + ' مباراة)</small>' : '') + '</span>').join('') + '</div></div>';
         const rivals = FC.Game.userTeam(st) === teamId ? FC.Select.rivals(st, teamId).slice(0, 4) : [];
         if (rivals.length) {
           body +=
             '<div class="panel rivals"><h3>منافسوك على مركزك</h3>' +
-            rivals.map((r) => '<div class="rv"><span>' + UI.flag(r.nat, 11) + ' ' + esc(r.fn + ' ' + r.ln) + '</span><span class="muted">' + esc(FC.Player.POS[r.pos].short) + ' · ' + r.age + ' سنة</span><b class="ovr ovr-' + FC.Player.tier(r.ovr) + '">' + Math.floor(r.ovr) + '</b></div>').join('') +
+            rivals.map((r) => '<div class="rv"><span>' + UI.flag(r.nat, 11) + ' ' + esc(r.fn + ' ' + r.ln) + (r.inj > 0 ? ' 🚑' : '') + (r.ban > 0 ? ' 🟥' : '') + ' <small class="muted">فورمة ' + U.round1(FC.Player.formOf(r)) + '</small></span><span class="muted">' + esc(FC.Player.POS[r.pos].short) + ' · ' + r.age + ' سنة</span><b class="ovr ovr-' + FC.Player.tier(r.ovr) + '">' + Math.floor(r.ovr) + '</b></div>').join('') +
             '<div class="rv me"><span>أنت</span><span class="muted">' + esc(FC.Player.POS[st.user.pos].short) + ' · ' + st.user.age + ' سنة</span><b class="ovr ovr-' + FC.Player.tier(FC.Player.ovr(st.user)) + '">' + Math.floor(FC.Player.ovr(st.user)) + '</b></div>' +
             '</div>';
         }
@@ -85,6 +89,13 @@
           '<div class="kv"><span>سعة الملعب</span><b>' + U.int(parent.cap * 1000) + ' متفرج</b></div>' +
           '<div class="kv"><span>الغريم التقليدي</span><b>' + (rival ? UI.badge(rival, 18) + ' ' + esc(rival.name) : '—') + '</b></div>' +
           '<div class="kv"><span>الخطة المفضلة</span><b>' + parent.form + '</b></div>' +
+          (function () {
+            const c = FC.Status.coachOf(st, parent.id);
+            let cap = parent.capt != null ? FC.getP(st, parent.capt) : null;
+            if (!cap) cap = parent.squad.map((id) => st.players[id]).filter(Boolean).sort((a, b) => FC.Status.capScore(st, b, parent.id) - FC.Status.capScore(st, a, parent.id))[0];
+            return '<div class="kv"><span>المدرب</span><b>' + esc(FC.Status.coachName(c)) + ' <small class="muted">(' + esc(FC.Status.STYLES[c.style].name) + ')</small></b></div>' +
+              '<div class="kv"><span>القائد</span><b>' + (cap ? esc(cap.id === 0 ? FC.Player.displayName(cap) + ' (أنت)' : cap.fn + ' ' + cap.ln).replace(/_/g, ' ') : '—') + '</b></div>';
+          })() +
           '<div class="kv"><span>ألوان القميص</span><b><i class="swatch" style="background:' + parent.c1 + '"></i><i class="swatch" style="background:' + parent.c2 + '"></i></b></div>' +
           '<p class="muted small">المرافق الأفضل تسرّع تطورك (من ×0.85 إلى ×1.2).</p></div>';
       }

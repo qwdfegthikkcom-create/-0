@@ -433,8 +433,11 @@
           // خروجك من الملعب
           if (fm.userOff && !offShown) {
             offShown = true;
-            const red = fm.userOff === 'red';
-            overlay('off', '<h3>' + (red ? 'طُردت من المباراة! 🟥' : 'المدرب قرر استبدالك') + '</h3>' + scoreHtml() + myHtml() + '<p class="muted">' + (red ? 'ستغيب عن المباراة القادمة غالباً. فريقك يكمل بعشرة لاعبين.' : 'أحسنت المجهود، زميلك يكمل مكانك.') + '</p><div class="fm-acts"><button class="btn gold" data-a="watch">شاهد بقية المباراة</button><button class="btn ghost" data-a="sim">محاكاة البقية</button></div>');
+            const k = fm.userOff;
+            const inj = state.user.inj;
+            const title = k === 'red' ? 'طُردت من المباراة! 🟥' : k === 'inj' ? 'أصبت! 🚑' : 'المدرب قرر استبدالك';
+            const note = k === 'red' ? 'ستغيب عن المباراة القادمة على الأقل. فريقك يكمل بعشرة لاعبين.' : k === 'inj' ? 'التشخيص الأولي: ' + (inj ? inj.name + ' — غياب متوقع ' + FC.Status.durationText(inj.days) : 'إصابة') + '.' : 'أحسنت المجهود، زميلك يكمل مكانك.';
+            overlay('off', '<h3>' + title + '</h3>' + scoreHtml() + myHtml() + '<p class="muted">' + esc(note) + '</p><div class="fm-acts"><button class="btn gold" data-a="watch">شاهد بقية المباراة</button><button class="btn ghost" data-a="sim">محاكاة البقية</button></div>');
             return;
           }
           // نهاية المباراة

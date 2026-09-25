@@ -37,7 +37,8 @@
       const facF = BG.facilities[U.clamp((club ? club.fac : 3) - 1, 0, 4)];
       const profF = U.lerp(BG.profMin, BG.profMax, (u.hid.prof - 1) / 19);
       const diffF = FC.BAL.diff[state.diff].growth;
-      return { minutesF, facF, profF, diffF, all: minutesF * facF * profF * diffF };
+      const injF = u.inj ? FC.BAL.growth.injured : 1; // المصاب يتطور أبطأ
+      return { minutesF, facF, profF, diffF, injF, all: minutesF * facF * profF * diffF * injF };
     },
 
     // مضاعف تدريب سمة هذا الأسبوع

@@ -65,7 +65,11 @@
         '<div class="grid2">' +
         '<div class="panel"><div class="next-h"><h3>تشكيلة ' + esc(S.club.short) + ' (' + S.form + ')</h3>' + UI.roleChip(status) + '</div>' + lineupPitch(S) +
         (status === 'bench' ? '<p class="muted small">أنت على دكة البدلاء' + (u.subOn > 0 ? ' — قد يُدخلك المدرب في الشوط الثاني.' : '.') + '</p>' : '') +
-        (status === 'out' ? '<p class="muted small">لست ضمن قائمة المباراة هذه المرة. استمر في التدريب لتقنع المدرب.</p>' : '') +
+        (status === 'out' ? '<p class="muted small">' + (st.user.inj ? 'أنت مصاب (' + esc(st.user.inj.name) + ') وتتابع من المدرجات.' : st.user.ban > 0 ? 'أنت موقوف هذه المباراة.' : 'لست ضمن قائمة المباراة هذه المرة. استمر في التدريب لتقنع المدرب.') + '</p>' : '') +
+        (function () {
+          const ex = FC.Select.explain(st, S.id);
+          return '<div class="why-box"><b>قرار المدرب:</b> ' + ex.reasons.map(esc).join(' · ') + '</div>';
+        })() +
         '</div>' +
         '<div class="panel"><h3>الخصم: ' + esc(O.club.name) + '</h3>' +
         '<div class="kv"><span>الترتيب</span><b>' + oppPos + ' (فريقك ' + myPos + ')</b></div>' +

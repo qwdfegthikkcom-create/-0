@@ -61,7 +61,7 @@
   for (const g in TRAIN) TRAIN[g].attrs.forEach((k) => (TRAIN_OF[k] = g));
 
   // حقول لاعب الذكاء الاصطناعي بالترتيب (للحفظ المضغوط)
-  const AI_FIELDS = ['id', 'fn', 'ln', 'nat', 'age', 'pos', 'ovr', 'pot', 'club', 'num', 'ht', 'ft', 'fm', 'fit', 'sAp', 'sSt', 'sMn', 'sG', 'sA', 'sRs', 'sYc', 'sRc', 'cAp', 'cG', 'cA'];
+  const AI_FIELDS = ['id', 'fn', 'ln', 'nat', 'age', 'pos', 'ovr', 'pot', 'club', 'num', 'ht', 'ft', 'fm', 'fit', 'sAp', 'sSt', 'sMn', 'sG', 'sA', 'sRs', 'sYc', 'sRc', 'cAp', 'cG', 'cA', 'inj', 'ban', 'yk'];
 
   // أثر الطول والوزن على السمات
   function bodyAdj(key, ht, wt) {
@@ -235,12 +235,19 @@
         seasonStartAttrs: U.clone(attrs),
         lastUps: [],
         maxOvr: target,
+        sharp: B.inj.sharpStart, // الجاهزية
+        inj: null, // الإصابة الحالية
+        injHist: [],
+        ban: 0, // مباريات الإيقاف المتبقية
+        reinj: 0, // أسابيع خطر تجدد الإصابة
+        trustLog: [], // أسباب تغيّر ثقة المدرب
+        captain: false,
       };
     },
 
     // إحصائيات موسم فارغة للاعبك
     emptySeason() {
-      return { ap: 0, st: 0, mn: 0, g: 0, a: 0, rs: 0, yc: 0, rc: 0, sh: 0, sot: 0, kp: 0, pas: 0, pasOk: 0, drb: 0, tk: 0, int: 0, sv: 0, cs: 0, motm: 0 };
+      return { ap: 0, st: 0, mn: 0, g: 0, a: 0, rs: 0, yc: 0, ycCount: 0, rc: 0, sh: 0, sot: 0, kp: 0, pas: 0, pasOk: 0, drb: 0, tk: 0, int: 0, sv: 0, cs: 0, motm: 0 };
     },
 
     // إضافة حقول ناقصة عند تحميل حفظ قديم
@@ -249,6 +256,21 @@
         const p = state.players[id];
         if (p.fm == null) p.fm = 6.7;
         if (p.fit == null) p.fit = 100;
+        if (p.inj == null) p.inj = 0;
+        if (p.ban == null) p.ban = 0;
+        if (p.yk == null) p.yk = 0;
+      }
+      const u = state.user;
+      if (u) {
+        if (u.sharp == null) u.sharp = FC.BAL.inj.sharpStart;
+        if (u.inj === undefined) u.inj = null;
+        if (u.ban == null) u.ban = 0;
+        if (u.reinj == null) u.reinj = 0;
+        if (!u.trustLog) u.trustLog = [];
+        if (u.captain == null) u.captain = false;
+        if (u.joinSeason == null) u.joinSeason = state.startSeason != null ? state.startSeason : state.season;
+        if (!u.injHist) u.injHist = [];
+        if (u.season && u.season.ycCount == null) u.season.ycCount = 0;
       }
     },
   });

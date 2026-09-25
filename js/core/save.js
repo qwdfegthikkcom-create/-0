@@ -11,7 +11,7 @@
   const FC = G.FC = G.FC || {};
 
   const APP = 'masirat-najm';
-  const VERSION = 1;
+  const VERSION = 2;
   const DB_NAME = 'masirat-najm';
   const STORE = 'kv';
   const LS_PREFIX = 'mn_';
@@ -61,7 +61,23 @@
 
   // ترحيل الإصدارات القديمة خطوة بخطوة إلى الإصدار الحالي
   const MIGRATIONS = {
-    // مثال للمستقبل: 1: (o) => { ...; o.v = 2; return o; }
+    // الإصدار 2 (المرحلة 2): الإصابات والإيقافات والجاهزية وأسباب ثقة المدرب
+    1: (o) => {
+      const u = o.user;
+      if (u) {
+        u.sharp = u.sharp != null ? u.sharp : 70;
+        u.inj = null;
+        u.ban = 0;
+        u.reinj = 0;
+        u.trustLog = [];
+        u.captain = false;
+        u.injHist = [];
+        u.joinSeason = o.startSeason;
+        if (u.season) u.season.ycCount = u.season.yc || 0;
+      }
+      o.v = 2;
+      return o;
+    },
   };
   function migrate(obj) {
     if (!obj || obj.app !== APP) throw new Error('ملف الحفظ غير صالح');

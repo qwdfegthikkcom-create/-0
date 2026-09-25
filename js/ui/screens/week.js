@@ -24,7 +24,7 @@
       const g = FC.Player.TRAIN[it.g];
       return 'تدريب فردي: ' + g.name + ' (' + INT_NAMES[it.int] + ')' + (it.mult != null ? ' — لعبت ×' + it.mult.toFixed(1) : ' — تلقائي ×1.0');
     }
-    return { rest: 'راحة كاملة', video: 'تحليل فيديو المباريات', family: 'وقت مع العائلة والأصدقاء' }[it.k];
+    return { physio: 'علاج طبيعي واستشفاء', rest: 'راحة كاملة', video: 'تحليل فيديو المباريات', family: 'وقت مع العائلة والأصدقاء' }[it.k];
   }
 
   UI.screens.week = {
@@ -62,12 +62,14 @@
           '</div></div>' +
           '<p class="muted small">تكلفة الطاقة ' + W.train[pick.int].energy + ' · اللياقة ' + W.train[pick.int].fit + (pick.int === 'hard' ? ' · المكثف يرفع ثقة المدرب ويستهلك لياقتك' : '') + '</p>' +
           '<div class="row gap">' +
-          (pick.g === 'shoot' ? '<button class="btn gold" data-act="game">🎯 العب التدريب</button>' : '<span class="muted small">اللعبة المصغّرة لهذه المجموعة تأتي في المرحلة 2</span>') +
+          (FC.Training.GAMES[pick.g] ? '<button class="btn gold" data-act="game">🎯 العب التدريب</button>' : '') +
           '<button class="btn" data-act="auto">تدريب تلقائي ×1.0</button>' +
           '<button class="btn ghost" data-act="cancel">إلغاء</button></div></div>';
       }
+      const inj = u.inj;
       const acts = [
-        ['train', 'تدريب فردي', 'لعبة مصغّرة أو تلقائي — يسرّع تطور مجموعة سمات', W.train.mid.energy + '+'],
+        ['train', 'تدريب فردي', inj ? 'غير متاح أثناء الإصابة' : 'لعبة مصغّرة أو تلقائي — يسرّع تطور مجموعة سمات', W.train.mid.energy + '+'],
+        ['physio', 'علاج طبيعي واستشفاء', inj ? 'يسرّع الشفاء ' + FC.BAL.inj.physioDays + ' أيام' : '+' + W.physio.fit + ' لياقة ويخفض خطر الإصابة', W.physio.energy],
         ['rest', 'راحة كاملة', '+' + W.rest.fit + ' لياقة، معنويات أفضل قليلاً', W.rest.energy],
         ['video', 'تحليل فيديو', 'تحسن ذهني بسيط + ثقة المدرب', W.video.energy],
         ['family', 'العائلة والأصدقاء', '+' + W.family.morale + ' معنويات', W.family.energy],
@@ -75,9 +77,9 @@
       return (
         '<div class="page-h"><h2>خطة الأسبوع</h2><span class="muted">' + esc(UI.date(st)) + '</span></div>' +
         '<div class="panel energy">' + UI.meter('الطاقة المتبقية', left, left > 40 ? 'good' : left > 15 ? 'mid' : 'low') +
-        '<p class="muted small">✓ تدريب الفريق تلقائي كل أسبوع. اختر حتى ' + W.maxActivities + ' نشاطات شخصية.</p></div>' +
+        '<p class="muted small">✓ تدريب الفريق تلقائي كل أسبوع. اختر حتى ' + W.maxActivities + ' نشاطات شخصية.' + (inj ? ' <b>أنت مصاب (' + esc(inj.name) + ')</b>: ركّز على العلاج الطبيعي.' : u.fit < FC.BAL.inj.fitLow ? ' لياقتك منخفضة: التدريب المكثف يرفع خطر الإصابة.' : '') + '</p></div>' +
         '<div class="acts">' +
-        acts.map((a) => '<button class="act panel" data-add="' + a[0] + '"' + (plan.length >= W.maxActivities ? ' disabled' : '') + '><b>' + a[1] + '</b><span>' + a[2] + '</span><i>طاقة ' + a[3] + '</i></button>').join('') +
+        acts.map((a) => '<button class="act panel" data-add="' + a[0] + '"' + (plan.length >= W.maxActivities || (a[0] === 'train' && inj) ? ' disabled' : '') + '><b>' + a[1] + '</b><span>' + a[2] + '</span><i>طاقة ' + a[3] + '</i></button>').join('') +
         '</div>' +
         trainBox +
         '<div class="panel"><h3>خطتك (' + plan.length + '/' + W.maxActivities + ')</h3>' +
@@ -130,7 +132,7 @@
           if (plan.some((x) => x.k === 'train' && x.g === pick.g)) return UI.toast('هذه المجموعة مضافة بالفعل');
           const it = Object.assign({}, pick);
           if (a === 'game') {
-            const res = await FC.Training.play('shoot', st.user);
+            const res = await FC.Training.play(pick.g, st.user);
             it.mult = res.mult;
           }
           plan.push(it);

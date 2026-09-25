@@ -63,6 +63,7 @@
         fit: 100,
         sAp: 0, sSt: 0, sMn: 0, sG: 0, sA: 0, sRs: 0, sYc: 0, sRc: 0,
         cAp: 0, cG: 0, cA: 0,
+        inj: 0, ban: 0, yk: 0, // أسابيع الإصابة، مباريات الإيقاف، الصفراء المتراكمة
       };
       if (p.pot < p.ovr) p.pot = Math.ceil(p.ovr);
       state.players[id] = p;
@@ -201,6 +202,7 @@
       const club = W.pickStartClub(state, rng, lgId);
       u.club = club.id;
       u.team = 'Y';
+      u.joinSeason = state.startSeason;
       W.makeYouthLeague(state, rng, lgId);
       state.wk = FC.Game.newWeekState();
       FC.Comp.newSeason(state);

@@ -75,8 +75,10 @@
       opts = opts || {};
       const rng = FC.rngOf(state);
       const BM = B().match;
-      const pickH = opts.pickH || FC.Select.pick(state, home, rng);
-      const pickA = opts.pickA || FC.Select.pick(state, away, rng);
+      // المباريات الكبيرة (ديربي أو قمة): المدرب يلعب بالأفضل ومداورة أقل
+      const big = opts.big != null ? opts.big : M.isBig(state, home, away, ref);
+      const pickH = opts.pickH || FC.Select.pick(state, home, rng, big);
+      const pickA = opts.pickA || FC.Select.pick(state, away, rng, big);
       const mkSide = (clubId, pick, isHome) => {
         const xi = pick.xi.map((x) => rec(state, x.pid, x.slot, true));
         const bench = pick.bench.map((pid) => rec(state, pid, null, false));
@@ -101,6 +103,7 @@
         pending: null,
         done: false,
         derby: state.clubs[home].rival === away,
+        big,
         user: null,
         mode: opts.mode || 'auto',
       };
@@ -116,6 +119,17 @@
       const si = uTeam === home ? 0 : uTeam === away ? 1 : -1;
       if (si >= 0) M.setupUser(state, m, si, rng);
       return m;
+    },
+
+    // هل هي مباراة كبيرة؟ ديربي، أو مواجهة بين فريقين من المربع الذهبي بعد 10 جولات
+    isBig(state, home, away, ref) {
+      const ch = state.clubs[home];
+      if (!ch) return false;
+      if (ch.rival === away) return true;
+      if (!ref || !state.leagues[ref.lg] || ref.r < 10) return false;
+      const t = FC.Comp.table(state, ref.lg);
+      const top = t.slice(0, 4).map((x) => x.id);
+      return top.indexOf(home) >= 0 && top.indexOf(away) >= 0;
     },
 
     // حساب معدل الفرص والاستحواذ من القوة الحالية
@@ -268,6 +282,8 @@
       }
       // البطاقات
       m.sides.forEach((S, si) => M.cards(state, m, si, ev, rng));
+      // الإصابات
+      if (FC.Status) FC.Status.matchMinute(state, m, ev, rng);
       // الفرص (بترتيب عشوائي)
       const order = rng.chance(0.5) ? [0, 1] : [1, 0];
       let happened = false;
@@ -382,7 +398,9 @@
       const u = state.user;
       const f = 1 + (B().match.moraleEffect * (u.morale - 65)) / 35;
       const fit = m.user ? m.user.fit : u.fit;
-      return f * (fit < 60 ? 0.9 + fit / 600 : 1);
+      // الجاهزية المنخفضة تنقص الأداء قليلاً
+      const sh = 1 - (FC.BAL.inj.sharpEffect * (100 - (u.sharp != null ? u.sharp : 75))) / 70;
+      return f * sh * (fit < 60 ? 0.9 + fit / 600 : 1);
     },
 
     // تطبيق نتيجة تسديدة على المباراة والإحصائيات والتعليق
@@ -848,6 +866,7 @@
       });
       out.motm = best ? best.pid : null;
       m.motm = best;
+      if (FC.Status) FC.Status.afterMatchAI(state, m, rng);
       if (m.ref) FC.Comp.record(state, m.ref.lg, m.ref.r, m.ref.i, m.sides[0].goals, m.sides[1].goals);
       return out;
     },

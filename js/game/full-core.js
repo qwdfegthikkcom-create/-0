@@ -773,6 +773,7 @@
   // خطأ: ركلة حرة أو جزاء + بطاقة محتملة
   function foul(fm, d, o) {
     const B = BF();
+    if (fm.rng.chance(B.foulInjury * (d.slide ? 2 : 1)) && FC.Status) injure(fm, o);
     d.st.fouls++;
     d.T.st.fouls++;
     d.rt += RT().foul;
@@ -1867,6 +1868,51 @@
       mu.subOn = -1;
     }
     aiSubs(fm);
+    // الإصابات (مرة كل دقيقة مباراة)
+    const mn = minuteOf(fm);
+    if (mn !== fm.injMin) {
+      fm.injMin = mn;
+      if (FC.Status) injuries(fm);
+    }
+  }
+
+  // إصابات محتملة في هذه الدقيقة
+  function injuries(fm) {
+    fm.teams.forEach((T) => {
+      const ps = T.players.map((e) => FC.Status.perMinute(fm.state, e.p, e.sta * 100));
+      const tot = ps.reduce((a, b) => a + b, 0);
+      if (fm.rng.next() >= tot) return;
+      injure(fm, T.players[fm.rng.weighted(ps)]);
+    });
+  }
+
+  // إصابة لاعب: يخرج ويدخل بديل إن أمكن
+  function injure(fm, e) {
+    if (!e || e.off || e.rec.injured) return;
+    const T = e.T;
+    const S = T.S;
+    e.rec.injured = true;
+    fm.fx.push({ t: 'foul', x: e.x, y: e.y });
+    if (e.isUser) FC.Status.injureUser(fm.state, fm.rng, 'match');
+    else FC.Status.injureAI(e.p, fm.rng);
+    feed(fm, FC.TXT.com(fm.rng, e.isUser ? 'userInjured' : 'injury', { p: e.name, t: T.club.short }), e.isUser ? 'user' : 'info', e.isUser ? 2 : 1, e.isUser ? { pid: 0 } : null);
+    const ins = S.bench.filter((x) => x.in < 0 && x.pid !== 0 && (x.p.pos === 'GK') === e.isGK);
+    if (S.subsLeft > 0 && ins.length) {
+      substitute(fm, T, e, FC.Match.bestFor(ins, e.rec.slot));
+      S.subPlan.pop();
+    } else if (e.isUser) {
+      // لا تبديلات: تخرج ويكمل فريقك بعشرة
+      T.players.splice(T.players.indexOf(e), 1);
+      e.off = true;
+      e.rec.on = false;
+      e.rec.out = minuteOf(fm);
+      if (fm.m.user) fm.m.user.state = 'off';
+      if (fm.ball.owner === e) fm.ball.owner = null;
+    }
+    if (e.isUser) {
+      fm.userOff = 'inj';
+      fm.banner = { txt: 'أصبت!', until: fm.t + 2.5 };
+    }
   }
 
   // تبديلات الذكاء الاصطناعي عند توقف اللعب

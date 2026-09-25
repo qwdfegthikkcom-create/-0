@@ -36,7 +36,7 @@
       '<div class="vs-m"><span class="vs-d">' + esc(UI.weekDate(st, nf.week)) + '</span><span class="vs-x">VS</span><span class="vs-h">' + (nf.home ? 'على أرضك' : 'خارج أرضك') + '</span></div>' +
       '<div class="vs-t">' + UI.badge(A, 44) + '<b>' + esc(A.name) + '</b></div>' +
       '</div>' +
-      '<div class="next-f"><span>دورك المتوقع: ' + UI.roleChip(role) + '</span><span>الخصم: المركز ' + oppPos + ' ' + form.map(UI.formChip).join('') + '</span></div>' +
+      '<div class="next-f"><span>دورك المتوقع: ' + UI.roleChip(role) + ' <button class="link" data-act="role">لماذا؟</button></span><span>الخصم: المركز ' + oppPos + ' ' + form.map(UI.formChip).join('') + '</span></div>' +
       '</div>'
     );
   }
@@ -55,6 +55,31 @@
       part.map((r) => '<tr class="' + (r.id === team ? 'me' : '') + '"><td>' + (rows.indexOf(r) + 1) + '</td><td class="l">' + UI.badge(st.clubs[r.id], 18) + ' ' + esc(st.clubs[r.id].short) + '</td><td>' + r.p + '</td><td dir="ltr">' + (r.gd > 0 ? '+' : '') + r.gd + '</td><td><b>' + r.pts + '</b></td></tr>').join('') +
       '</tbody></table></div>'
     );
+  }
+
+  // تنبيهات الحالة: إصابة، عودة مبكرة، إيقاف، خطر تجدد الإصابة
+  function statusAlerts(st) {
+    const u = st.user;
+    let h = '';
+    if (u.inj) {
+      const inj = u.inj;
+      const done = Math.round(100 * (1 - Math.max(0, inj.days) / inj.total));
+      h +=
+        '<div class="panel alert bad"><div class="al-h"><span class="al-i">🚑</span><div><b>مصاب: ' + esc(inj.name) + '</b><span class="muted small">متبقٍ تقريباً ' + esc(FC.Status.durationText(Math.max(1, inj.days))) + ' · العلاج الطبيعي يسرّع العودة</span></div></div>' +
+        '<div class="m-track"><i style="width:' + done + '%"></i></div>' +
+        (inj.offer ? '<p class="small">الجهاز الطبي يعرض عليك <b>عودة مبكرة</b> الآن، مع خطر أعلى لتجدد الإصابة.</p><div class="row gap"><button class="btn small gold" data-early="1">أعود مبكراً</button><button class="btn small ghost" data-early="0">أكمل العلاج</button></div>' : '') +
+        '</div>';
+    }
+    if (u.ban > 0) h += '<div class="panel alert"><div class="al-h"><span class="al-i">🟥</span><div><b>موقوف ' + (u.ban === 1 ? 'مباراة واحدة' : u.ban + ' مباريات') + '</b><span class="muted small">لن تكون ضمن القائمة حتى ينتهي الإيقاف · الصفراء هذا الموسم: ' + (u.season.ycCount || 0) + '</span></div></div></div>';
+    else if ((u.season.ycCount || 0) % FC.BAL.inj.yellowLimit === FC.BAL.inj.yellowLimit - 1) h += '<div class="panel alert"><div class="al-h"><span class="al-i">🟨</span><div><b>تحذير: ' + u.season.ycCount + ' بطاقات صفراء</b><span class="muted small">الصفراء القادمة تعني الإيقاف مباراة</span></div></div></div>';
+    if (u.reinj > 0 && !u.inj) h += '<div class="panel alert"><div class="al-h"><span class="al-i">⚠️</span><div><b>خطر تجدد الإصابة</b><span class="muted small">عدت مبكراً: تجنّب التدريب المكثف ' + u.reinj + ' أسابيع</span></div></div></div>';
+    return h;
+  }
+
+  // سطر أسباب ثقة المدرب
+  function trustLine(st) {
+    const rs = FC.Status.trustReasons(st).slice(0, 3);
+    return '<div class="trust-why">' + (rs.length ? rs.map((r) => '<span class="' + (r.d > 0 ? 'up' : 'dn') + '">' + (r.d > 0 ? '+' : '') + r.d + ' ' + esc(r.name) + '</span>').join('') : '<span class="muted">لا تغييرات مؤخراً</span>') + '<button class="link" data-act="why">المدرب ولماذا؟</button></div>';
   }
 
   function seasonStats(u) {
@@ -99,18 +124,21 @@
       else cta = '<button class="btn gold big" data-act="endweek">' + UI.icon('play') + ' إنهاء الأسبوع</button>';
       const form = u.form.slice().reverse();
       return (
-        (st.flags.tutDone ? '' : '<div class="panel tut"><h3>كيف تلعب؟</h3><ol><li>كل أسبوع: اختر <b>خطة الأسبوع</b> (تدريب فردي، راحة، تحليل فيديو، عائلة).</li><li>العب <b>مباراتك</b>: عند اللحظات الحاسمة تتوقف المباراة — اسحب من الكرة للخلف ثم أفلت للتسديد، أو اضغط زميلاً للتمرير.</li><li><b>أنهِ الأسبوع</b>: تُحاكى كل الدوريات وترى تطورك (+1) ويُحفظ تقدمك تلقائياً.</li><li>تطوّر مع فريق الشباب حتى يطلبك <b>الفريق الأول</b>.</li></ol><button class="btn small" data-act="tut">فهمت</button></div>') +
+        (st.flags.tutDone ? '' : '<div class="panel tut"><h3>كيف تلعب؟</h3><ol><li>كل أسبوع: اختر <b>خطة الأسبوع</b> (تدريب فردي بلعبة مصغّرة، علاج، راحة، تحليل فيديو، عائلة).</li><li>العب <b>مباراتك كاملة</b>: تتحكم بلاعبك فقط في ملعب ثلاثي الأبعاد (عصا تحكم يساراً وأزرار يميناً)، أو اختر وضع اللحظات من الإعدادات.</li><li><b>أنهِ الأسبوع</b>: تُحاكى كل الدوريات وترى تطورك (+1) ويُحفظ تقدمك تلقائياً.</li><li>تطوّر مع فريق الشباب حتى يطلبك <b>الفريق الأول</b>.</li></ol><button class="btn small" data-act="tut">فهمت</button></div>') +
         '<section class="hero">' +
         '<div class="hero-card">' + UI.card(u, { club, shine: !!st.flags.shine }) + '</div>' +
         '<div class="hero-info panel">' +
         '<h2>' + esc(FC.Player.displayName(u)) + '</h2>' +
-        '<div class="hero-sub">' + UI.flag(u.nat, 14) + ' ' + esc(FC.Player.POS[u.pos].name) + ' · ' + u.age + ' سنة · ' + UI.badge(club, 18) + ' ' + esc(club.name) + (u.team === 'Y' ? ' <span class="chip-tag">الشباب</span>' : '') + '</div>' +
+        '<div class="hero-sub">' + UI.flag(u.nat, 14) + ' ' + esc(FC.Player.POS[u.pos].name) + ' · ' + u.age + ' سنة · ' + UI.badge(club, 18) + ' ' + esc(club.name) + (u.team === 'Y' ? ' <span class="chip-tag">الشباب</span>' : '') + (u.captain ? ' <span class="chip-tag cap">© القائد</span>' : '') + '</div>' +
         '<div class="hero-pot">الإمكانات المقدّرة <b dir="ltr">' + pr[0] + '–' + pr[1] + '</b></div>' +
         UI.meter('اللياقة', u.fit) +
+        UI.meter('الجاهزية', u.sharp != null ? u.sharp : 70) +
         UI.meter('المعنويات', u.morale) +
         UI.meter('ثقة المدرب', u.trust) +
+        trustLine(st) +
         '<div class="form-row"><span>الفورمة</span>' + (form.length ? form.map((r) => UI.rating(r)).join('') : '<span class="muted small">لا مباريات بعد</span>') + '</div>' +
         '</div></section>' +
+        statusAlerts(st) +
         '<section class="cta">' + cta + '<button class="btn ghost" data-act="quick">' + UI.icon('fast') + ' محاكاة الأسبوع بسرعة</button></section>' +
         '<div class="grid2">' + nextMatchPanel(st) + messages(st) + miniTable(st) + seasonStats(u) + '</div>'
       );
@@ -130,8 +158,46 @@
         }
         if (a === 'endweek') UI.endWeek();
         if (a === 'quick') UI.quickWeek();
+        if (a === 'why') UI.coachInfo();
+        if (a === 'role') UI.roleWhy();
+      });
+      el.addEventListener('click', (ev) => {
+        const t = ev.target.closest('[data-early]');
+        if (!t) return;
+        const acc = t.dataset.early === '1';
+        FC.Status.earlyReturn(st, acc);
+        UI.toast(acc ? 'عدت مبكراً — انتبه لخطر الانتكاسة' : 'قررت إكمال العلاج', acc ? 'ok' : '');
+        UI.saveNow(true);
+        UI.refresh();
       });
     },
+  };
+
+  // نافذة المدرب وأسباب الثقة
+  UI.coachInfo = function () {
+    const st = FC.State.cur;
+    const u = st.user;
+    const cid = FC.Game.userTeam(st);
+    const club = st.clubs[cid];
+    const c = club.youth ? null : FC.Status.coachOf(st, cid);
+    const rs = FC.Status.trustReasons(st);
+    const S = FC.Status.STYLES;
+    UI.modal(
+      'ثقة المدرب: ' + Math.round(u.trust),
+      (c ? '<p><b>' + esc(FC.Status.coachName(c)) + '</b> · ' + c.age + ' سنة · منذ ' + FC.Calendar.seasonLabel(c.since) + '</p><p class="muted small">الأسلوب: ' + esc(S[c.style].name) + ' — ' + esc(S[c.style].desc) + '</p>' : '<p class="muted small">مدرب فريق الشباب يمنح مواهب الأكاديمية فرصاً أكبر.</p>') +
+        '<h4>أسباب تغيّر الثقة مؤخراً</h4>' +
+        (rs.length ? '<div class="why-list">' + rs.map((r) => '<div class="' + (r.d > 0 ? 'up' : 'dn') + '"><span>' + esc(r.name) + '</span><b dir="ltr">' + (r.d > 0 ? '+' : '') + r.d + '</b></div>').join('') + '</div>' : '<p class="muted">لا تغييرات تذكر في الأسابيع الأخيرة.</p>') +
+        '<p class="muted small">ترتفع الثقة بالأداء الجيد، التدريب المكثف وتحليل الفيديو، وتنخفض بالتقييمات الضعيفة والبطاقات.</p>',
+      [{ label: 'حسناً', cls: 'gold', value: 1 }]
+    );
+  };
+
+  // لماذا أنا أساسي أو احتياطي؟
+  UI.roleWhy = function () {
+    const st = FC.State.cur;
+    const ex = FC.Select.explain(st, FC.Game.userTeam(st));
+    const title = { start: 'أساسي', bench: 'على الدكة', out: 'خارج القائمة' }[ex.role];
+    UI.modal('دورك المتوقع: ' + title, '<ul class="why-ul">' + ex.reasons.map((r) => '<li>' + esc(r) + '</li>').join('') + '</ul>', [{ label: 'حسناً', cls: 'gold', value: 1 }]);
   };
 
   // إنهاء الأسبوع ← ملخص الأسبوع ← حفظ تلقائي
@@ -236,7 +302,7 @@
     const u = st.user;
     UI.modal(
       'أهلاً بك يا ' + (u.nick || u.fn),
-      '<p>عمرك 16 سنة وتبدأ مع <b>فريق الشباب</b>. كل أسبوع تخطط لتدريبك، تلعب مباراتك، وتشاهد تطورك.</p><p>في المباريات تتحكم بلاعبك فقط في <b>اللحظات الحاسمة</b>: اسحب من الكرة للخلف (مثل المقلاع) ثم أفلت للتسديد، أو اضغط على زميل لتمرر له.</p><p class="muted small">يمكنك دائماً الضغط على «لعب تلقائي» داخل اللحظة.</p>',
+      '<p>عمرك 16 سنة وتبدأ مع <b>فريق الشباب</b>. كل أسبوع تخطط لتدريبك، تلعب مباراتك، وتشاهد تطورك.</p><p>في المباراة <b>تتحكم بلاعبك طوال المباراة</b> مثل «مهنة اللاعب»: عصا تحكم على اليسار، وأزرار التمرير والتسديد على اليمين (أو الأسهم وS/D/W/A على الكمبيوتر).</p><p class="muted small">يمكنك «محاكاة البقية» في أي لحظة، أو اختيار وضع اللحظات من الإعدادات.</p>',
       [{ label: 'لنبدأ!', cls: 'gold', value: 1 }]
     );
   };
