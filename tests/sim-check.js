@@ -259,8 +259,57 @@ if (FC.Moment && FC.Moment.selfTest) {
   check('تحويل الزميل بعد بينية ناجحة', mt.throughConv, 0.3, 0.55, pct);
   check('لاعب 85 أدق من لاعب 55 في الانفراد', mt.big85 - mt.big55, 0.08, 1, pct, '85: ' + pct(mt.big85) + ' / 55: ' + pct(mt.big55));
 } else skip('محرك اللحظات', 'غير محمّل');
-skip('تحويل ركلات الجزاء (75–80%)', 'المرحلة 2');
-skip('تحويل الرأسيات (10–20%)', 'المرحلة 2');
+// اللحظات الخاصة (جزاء، رأسية، ركلة حرة، حراسة، دفاع) بلاعب متوسط
+if (FC.SpecialCore) {
+  const sp = FC.SpecialCore.selfTest(QUICK ? 4000 : 20000);
+  check('تحويل ركلات الجزاء', sp.pen, 0.75, 0.8, pct);
+  check('تحويل الرأسيات من عرضية', sp.header, 0.1, 0.2, pct);
+  check('تحويل الركلات الحرة المباشرة', sp.fk, 0.04, 0.1, pct);
+  check('تصدي الحارس: فرصة محققة على المرمى', sp.gkBig, 0.32, 0.52, pct, 'الإحصاء ≈42%');
+  check('تصدي الحارس: نصف فرصة على المرمى', sp.gkHalf, 0.64, 0.84, pct, 'الإحصاء ≈74%');
+  check('تصدي الحارس: تسديدة بعيدة على المرمى', sp.gkLong, 0.78, 0.94, pct, 'الإحصاء ≈86%');
+  check('صد ركلات الجزاء (حارساً)', sp.penSave, 0.15, 0.3, pct);
+  check('نجاح الافتكاك في المواجهة', sp.defWon, 0.3, 0.55, pct, 'أخطاء ' + pct(sp.defFoul));
+  check('إبعاد العرضيات', sp.clear, 0.4, 0.7, pct);
+} else skip('اللحظات الخاصة', 'غير محمّلة');
+
+// مباريات بوضع اللحظات مع حسم تلقائي لكل اللحظات (مهاجم، مدافع، حارس)
+{
+  const scens = {};
+  let goals = 0;
+  let n = 0;
+  let errs = 0;
+  ['ST', 'CB', 'GK'].forEach((pos, k) => {
+    const st3 = FC.Game.newCareer({ fn: 'x', ln: 'y', nat: 'IRQ', city: '', pos, foot: 'R', ht: 186, wt: 80, face: {}, diff: 'real', seed: 900 + k });
+    for (let wk = 0; wk < (QUICK ? 20 : 45); wk++) {
+      const ref = FC.Game.userFixtureRef(st3);
+      if (ref && !st3.wk.played) {
+        try {
+          const m = FC.Game.startMatch(st3, 'play');
+          m.live = true;
+          let guard = 0;
+          while (!m.done && guard++ < 500) {
+            if (m.pending) {
+              scens[m.pending.scen] = (scens[m.pending.scen] || 0) + 1;
+              FC.Match.autoResolve(st3, m);
+            } else FC.Match.step(st3, m);
+          }
+          FC.Game.completeMatch(st3, m);
+          goals += m.sides[0].goals + m.sides[1].goals;
+          n++;
+        } catch (e) {
+          errs++;
+          console.log('  خطأ في وضع اللحظات: ' + e.stack);
+        }
+      }
+      FC.Game.endWeek(st3);
+    }
+  });
+  console.log('  أنواع اللحظات: ' + Object.keys(scens).map((k) => k + ' ' + scens[k]).join(' · '));
+  check('وضع اللحظات: مباريات بلا أخطاء', errs, 0, 0, (v) => String(v), 'عينة ' + n);
+  check('وضع اللحظات: متوسط الأهداف', goals / Math.max(1, n), 1.8, 3.8, f2);
+  check('وضع اللحظات: لحظات دفاعية وخاصة ظهرت', (scens.sp_gk || 0) + (scens.sp_defend || 0) + (scens.sp_clear || 0), 3, 1e6, (v) => String(v));
+}
 
 // ====================== 3ب) المباراة الكاملة (تتحكم بلاعبك) ======================
 console.log('\n=== المباراة الكاملة: 22 لاعباً بذكاء اصطناعي، لاعبك تلقائي ===');

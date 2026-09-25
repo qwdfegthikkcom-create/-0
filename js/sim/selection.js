@@ -73,7 +73,8 @@
       s += (FC.Player.formOf(p) - 6.7) * S.formWeight;
       const fit = p.id === 0 ? p.fit : p.fit == null ? 100 : p.fit;
       if (fit < S.fitnessLow) s -= (S.fitnessLow - fit) * S.fitnessPenalty * (big ? 0.5 : 1);
-      if (p.id === 0) {
+      // مزايا لاعبك (الثقة، موهبة الأكاديمية) تنطبق فقط في مركزه أو القريب منه
+      if (p.id === 0 && fam(p.pos, slot) >= 0.85) {
         s += (p.trust - 50) * S.trustWeight;
         if (p.team === 'Y') s += S.youthBonus;
         s += ((p.sharp != null ? p.sharp : 75) - 75) * BC.sharpWeight;

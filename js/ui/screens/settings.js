@@ -33,7 +33,7 @@
         (st ? '<button class="btn gold" data-act="save">حفظ الآن</button><button class="btn" data-act="export">تصدير ملف</button>' : '') +
         '<button class="btn ghost" data-act="saves">الحفظ والتحميل والاستيراد</button></div></div>' +
         (st ? '<div class="panel"><h3>الشرح</h3><button class="btn ghost" data-act="tut">إعادة عرض الشرح</button></div>' : '') +
-        '<p class="muted small center">مسيرة نجم — المرحلة 1 · كل الرسومات والأصوات مولّدة بدون ملفات خارجية</p>' +
+        '<p class="muted small center">مسيرة نجم — المرحلة 2 · كل الرسومات والأصوات مولّدة بدون ملفات خارجية</p>' +
         '</div>'
       );
     },

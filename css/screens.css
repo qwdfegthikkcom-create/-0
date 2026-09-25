@@ -408,3 +408,4 @@
   .fm-t { max-width: 22vw; }
   .fm-sc { font-size: 16px; min-width: 46px; }
 }
+.m-btns .gold-chip { background: var(--goldgrad); color: #1a1405; font-weight: 800; border-color: var(--gold2); padding-inline: 18px; }

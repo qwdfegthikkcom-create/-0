@@ -18,7 +18,9 @@
   const AST_ATTR = { big: ['vis', 'spas'], half: ['cro', 'spas'], long: ['spas', 'vis'], header: ['cro', 'cur'] };
   const TYPES = ['big', 'half', 'long', 'header', 'fk', 'pen'];
   // أنواع اللحظات المتاحة في هذه المرحلة
-  const PLAY_SHOT = { big: 1, half: 1, long: 1 };
+  const PLAY_SHOT = { big: 1, half: 1, long: 1, header: 1, fk: 1, pen: 1 };
+  // اللحظات الخاصة (رسم ومنطق مختلفان عن لحظات اللعب المفتوح)
+  const SPECIAL_SHOT = { header: 'sp_header', fk: 'sp_fk', pen: 'sp_pen' };
   const PLAY_PASS = { big: 1, half: 1 };
 
   // مهارة التسديد لنوع فرصة
@@ -208,6 +210,37 @@
       u.natRate = (S.rate / m.perMin) * nat;
     },
 
+    // لحظة دفاعية لك (حارساً أو مدافعاً) عندما يصنع الخصم فرصة
+    tryDefMoment(state, m, si, type, shooter, assister, rng) {
+      const u = m.user;
+      if (u.used >= B().moments.maxPerMatch) return false;
+      const role = u.x.role;
+      const BSp = B().special;
+      const share = BSp.defShare[role] || 0;
+      let scen = null;
+      if (role === 'GK') {
+        if (type === 'pen') scen = 'sp_pensave';
+        else if (rng.next() < share && m.mode !== 'mixed') {
+          // اللحظة تُعرض فقط إذا كانت التسديدة على المرمى (حتى تبقى الإحصائيات واقعية)
+          const BM = B().match;
+          const T = BM.types[type];
+          const O = m.sides[1 - si];
+          const gv = gkVal(u.x.p);
+          const conv = U.clamp(T.conv * Math.exp(BM.finK * (finOf(shooter.p, type) - 70)) * Math.exp(-BM.gkK * (gv - 70)), 0.005, 0.95);
+          const pOn = conv + (1 - conv) * T.onT;
+          if (rng.next() >= pOn) return false;
+          scen = 'sp_gk';
+          void O;
+        }
+      } else if (share > 0 && rng.next() < share && m.mode !== 'mixed') {
+        if (type === 'header') scen = 'sp_clear';
+        else if (type === 'big' || type === 'half') scen = 'sp_defend';
+      }
+      if (!scen) return false;
+      M.makePending(state, m, 'def', type, si, shooter, assister, rng, scen);
+      return true;
+    },
+
     // تسمية الوقت: 45+2 أو 90+3
     clock(m) {
       if (m.phase === 'h1' || m.phase === 'ht') return m.min > 45 ? '45+' + (m.min - 45) : String(m.min);
@@ -331,6 +364,7 @@
       if (BM.assistW[type] && rng.chance(BM.types[type].ast)) assister = M.pickAssister(on, shooter, type, rng);
       // لحظة لك؟
       const u = m.user;
+      if (u && u.state === 'on' && u.si !== si && u.momentsOn && M.tryDefMoment(state, m, si, type, shooter, assister, rng)) return true;
       if (u && u.state === 'on' && u.si === si && u.momentsOn) {
         if (shooter.pid === 0 && M.canPlay(m, 'shot', type)) {
           M.makePending(state, m, 'shot', type, si, shooter, assister, rng);
@@ -348,7 +382,8 @@
     canPlay(m, kind, type) {
       const u = m.user;
       if (u.used >= B().moments.maxPerMatch) return false;
-      if (m.mode === 'mixed' && type !== 'big') return false;
+      if (m.mode === 'mixed' && type !== 'big' && type !== 'pen') return false;
+      if (kind === 'def') return true;
       return kind === 'shot' ? !!PLAY_SHOT[type] : !!PLAY_PASS[type];
     },
 
@@ -631,11 +666,13 @@
     },
 
     // إنشاء لحظة معلقة بانتظار اللعب
-    makePending(state, m, kind, type, si, shooter, assister, rng) {
+    makePending(state, m, kind, type, si, shooter, assister, rng, forceScen) {
       const u = m.user;
       u.used++;
-      let scen;
-      if (kind === 'shot') scen = { big: 'oneOnOne', half: 'boxShot', long: 'longShot' }[type];
+      let scen = forceScen || null;
+      if (scen) {
+        /* لحظة دفاعية محددة */
+      } else if (kind === 'shot') scen = SPECIAL_SHOT[type] || { big: 'oneOnOne', half: 'boxShot', long: 'longShot' }[type];
       else if (kind === 'pass') scen = type === 'big' ? 'throughBall' : u.x.role === 'W' || u.x.role === 'FB' ? 'cutback' : 'throughBall';
       else {
         const role = u.x.role;
@@ -645,17 +682,25 @@
         }[role];
         scen = rng.pick(opts);
       }
-      const people = M.pickPeople(m, si, kind, scen, kind === 'pass' ? shooter : null);
+      const special = scen.indexOf('sp_') === 0;
       const S = m.sides[si];
       const O = m.sides[1 - si];
+      let people;
+      if (kind === 'def') {
+        // المهاجم الخصم وزملاؤك المدافعون وحارسك
+        people = { mates: [], opps: [shooter], gk: null };
+      } else people = M.pickPeople(m, si, kind, scen, kind === 'pass' ? shooter : null);
+      if (special && kind !== 'def') people.gk = O.str.gkRec && O.str.gkRec.on ? O.str.gkRec : null;
+      const mine = kind === 'def' ? m.sides[u.si] : S;
+      const theirs = kind === 'def' ? S : O;
       m.pending = {
-        kind, type, scen, si,
+        kind, type, scen, si, special,
         clock: M.clock(m),
         me: Object.assign(M.person(u.x), { foot: state.user.foot, wf: state.user.hid.wf, fit: u.fit, morale: state.user.morale }),
         mates: people.mates.map((x) => M.person(x)),
         opps: people.opps.map((x) => M.person(x)),
         gk: people.gk ? M.person(people.gk) : null,
-        kit: { mine: [S.club.c1, S.club.c2], opp: [O.club.c1, O.club.c2] },
+        kit: { mine: [mine.club.c1, mine.club.c2], opp: [theirs.club.c1, theirs.club.c2] },
         diff: state.diff,
         derby: m.derby,
         score: [m.sides[0].goals, m.sides[1].goals],
@@ -685,6 +730,7 @@
       const pd = m.pending;
       if (!pd) return [];
       const rng = FC.rngOf(state);
+      if (pd.special) return M.resolveMoment(state, m, FC.SpecialCore.auto(pd, rng));
       const ev = [];
       m.pending = null;
       const u = m.user;
@@ -743,6 +789,7 @@
       u.rt += (st.loss || 0) * BR.loss + (st.badLoss || 0) * BR.badLoss;
       const nm = (x) => (x.pid === 0 ? FC.Player.displayName(x.p) : x.p.ln);
       const gk = O.str.gkRec && O.str.gkRec.on ? O.str.gkRec : null;
+      if (pd.kind === 'def') return M.resolveDef(state, m, pd, res, ev, rng);
       if (res.shooter) {
         const type = pd.kind === 'shot' && res.shooter === 'user' ? pd.type : res.shotType || pd.type || 'half';
         const shooter = res.shooter === 'user' ? u.x : pd._mateRecs[res.mateIdx] || pd._shooter || u.x;
@@ -777,6 +824,63 @@
         ev.push(e);
         m.events.push(e);
       }
+      return ev;
+    },
+
+    // نتيجة لحظتك الدفاعية
+    resolveDef(state, m, pd, res, ev, rng) {
+      const u = m.user;
+      const BR = B().rating;
+      const S = m.sides[pd.si]; // الخصم المهاجم
+      const nm = (x) => (x.pid === 0 ? FC.Player.displayName(x.p) : x.p.ln);
+      const me = FC.Player.displayName(u.x.p);
+      const say = (key, imp) => {
+        if (!m.live) return;
+        const e = { min: pd.clock, t: 'user', si: u.si, txt: FC.TXT.com(rng, key, { p: me, a: nm(pd._shooter), t: S.club.short }), imp: imp || 2, pid: 0, moment: true };
+        ev.push(e);
+        m.events.push(e);
+      };
+      const o = res.outcome;
+      if (pd.scen === 'sp_gk' || pd.scen === 'sp_pensave') {
+        const out = o === 'saved' ? 'saved' : o === 'off' ? 'off' : 'goal';
+        M.applyShot(state, m, pd.si, pd.type, pd._shooter, pd._assister, out, ev, rng);
+        return ev;
+      }
+      if (o === 'won' || o === 'cleared') {
+        if (o === 'won') u.tk++;
+        else u.int++;
+        u.rt += BR.tackle;
+        m.mom += pd.si === 0 ? -8 : 8;
+        say(o === 'won' ? 'userTackle' : 'userCleared');
+        return ev;
+      }
+      if (o === 'foul') {
+        u.fouls++;
+        u.rt -= 0.05;
+        say('userFoul', 2);
+        // بطاقة محتملة
+        if (rng.chance(B().special.foulYellow)) {
+          const x = u.x;
+          x.yc++;
+          u.rt += BR.yellow;
+          const Sm = m.sides[u.si];
+          if (x.yc >= 2) {
+            x.rc = 1;
+            M.sendOff(m, Sm, x);
+            M.say(m, ev, rng, 'card', 'secondYellow', { p: me, t: Sm.club.short }, 2, { card: 'r', si: u.si, pid: 0 });
+          } else M.say(m, ev, rng, 'card', 'yellow', { p: me, t: Sm.club.short }, 1, { card: 'y', si: u.si, pid: 0 });
+        }
+        // ركلة حرة أو جزاء للخصم
+        const on = S.xi.filter((x) => x.on && x.role !== 'GK');
+        const pen = pd.type === 'big' && rng.chance(B().special.foulPen);
+        const t = pen ? 'pen' : 'fk';
+        if (on.length) M.resolveStat(state, m, pd.si, t, M.pickShooter(on, t, rng), null, ev, rng);
+        return ev;
+      }
+      // تجاوزك المهاجم أو فاتتك العرضية: تكمل الفرصة
+      u.rt -= 0.04;
+      say(pd.scen === 'sp_clear' ? 'userMissedClear' : 'userBeaten', 1);
+      M.resolveStat(state, m, pd.si, pd.type, pd._shooter, pd._assister, ev, rng);
       return ev;
     },
 

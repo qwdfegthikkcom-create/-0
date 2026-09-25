@@ -241,7 +241,7 @@
         clearTimeout(timer);
         skipping = false;
         const pd = m.pending;
-        const res = await FC.MomentView.play(pd);
+        const res = await (pd.special ? FC.SpecialView.play(pd) : FC.MomentView.play(pd));
         if (!alive) return;
         addEvents(FC.Match.resolveMoment(st, m, res));
         draw();

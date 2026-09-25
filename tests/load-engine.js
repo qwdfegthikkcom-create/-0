@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)]
   .map((m) => m[1])
-  .filter((s) => /^js\/(core|data|sim)\//.test(s) || s === 'js/game/moment-core.js' || s === 'js/game/full-core.js');
+  .filter((s) => /^js\/(core|data|sim)\//.test(s) || s === 'js/game/moment-core.js' || s === 'js/game/full-core.js' || s === 'js/game/special-core.js');
 
 for (const s of scripts) {
   vm.runInThisContext(fs.readFileSync(path.join(root, s), 'utf8'), { filename: s });

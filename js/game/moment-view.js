@@ -50,7 +50,7 @@
           '</div>' +
           '<div class="m-bar"><div class="m-timer"><i></i></div>' +
           '<div class="m-btns"><button class="chip" data-k="lob">⤴ كرة عالية</button><button class="chip" data-k="auto">▶ لعب تلقائي</button></div>' +
-          '<div class="m-hint">اسحب من الكرة للخلف ثم أفلت للتسديد • اضغط على زميل للتمرير</div></div>';
+          '<div class="m-hint">اسحب من الكرة للخلف ثم أفلت للتسديد • اسحب لاعبك للأمام للمراوغة • اضغط على زميل للتمرير</div></div>';
         root.appendChild(el);
         root.classList.add('show');
         const canvas = el.querySelector('canvas');
@@ -98,7 +98,8 @@
           const bp = scr(sc.ball);
           const up = scr(sc.user);
           if (Math.hypot(p.x - bp.x, p.y - bp.y) < 52 || Math.hypot(p.x - up.x, p.y - up.y) < 40) {
-            aiming = { x: p.x, y: p.y, id: ev.pointerId };
+            // السحب للخلف = تسديد/تمرير (مقلاع)، والسحب للأمام = مراوغة بالكرة
+            aiming = { x: p.x, y: p.y, x0: p.x, y0: p.y, id: ev.pointerId, mode: null };
             try {
               canvas.setPointerCapture(ev.pointerId);
             } catch (e) {
@@ -123,6 +124,8 @@
           const p = pointerXY(ev);
           aiming.x = p.x;
           aiming.y = p.y;
+          if (!aiming.mode && Math.hypot(p.x - aiming.x0, p.y - aiming.y0) > 14) aiming.mode = p.y < aiming.y0 ? 'dribble' : 'aim';
+          if (aiming.mode === 'dribble' && sc.ball.owner === sc.user && !sc.result) FC.Moment.inputMove(sc, D.mx(cam, p.x), D.my(cam, p.y));
         }
         function aimVec() {
           const bp = scr(sc.ball);
@@ -132,6 +135,10 @@
           return { ang: Math.atan2(-vy, vx), power: U.clamp(len / 115, 0, 1), len };
         }
         function onUp(ev) {
+          if (aiming && aiming.mode === 'dribble') {
+            aiming = null;
+            return;
+          }
           if (aiming) {
             const a = aimVec();
             aiming = null;
@@ -163,6 +170,11 @@
           } else if (k >= '1' && k <= '4') {
             const m = sc.mates[parseInt(k, 10) - 1];
             if (m) FC.Moment.inputPass(sc, m);
+          } else if (k.indexOf('Arrow') === 0) {
+            // مراوغة بالأسهم
+            ev.preventDefault();
+            const d = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [-1, 0.4], ArrowRight: [1, 0.4] }[k];
+            FC.Moment.inputMove(sc, sc.user.x + d[0] * 5, sc.user.y + d[1] * 5);
           } else if (k === 'l' || k === 'L' || k === 'ل') toggleLob();
           else if (k === 'a' || k === 'A' || k === 'ش') toggleAuto();
         }
@@ -239,7 +251,19 @@
           sc.mates.forEach((e) => D.player(ctx, cam, e, kitMine, { tap: canAct, label: canAct ? e.name : null }));
           D.player(ctx, cam, sc.user, kitMine, { me: true, label: 'أنت' });
           // التصويب
-          if (aiming && canAct) drawAim(ctx);
+          if (aiming && canAct && aiming.mode !== 'dribble') drawAim(ctx);
+          // مسار المراوغة
+          if (sc.userMove && canAct && sc.ball.owner === sc.user) {
+            const up = scr(sc.user);
+            ctx.strokeStyle = 'rgba(126,226,174,0.8)';
+            ctx.setLineDash([6, 5]);
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(up.x, up.y);
+            ctx.lineTo(D.sx(cam, sc.userMove.x), D.sy(cam, sc.userMove.y));
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
           D.ball(ctx, cam, sc.ball);
           // شرارات المؤثرات
           for (let i = sparks.length - 1; i >= 0; i--) {
