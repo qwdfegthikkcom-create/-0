@@ -155,6 +155,11 @@
     render() {
       const st = FC.State.cur;
       const u = st.user;
+      // اعتزلت: ملخص المسيرة
+      if (u.retired) {
+        setTimeout(() => UI.go('legacy'), 0);
+        return '<div class="panel"><p class="muted">انتهت مسيرتك…</p></div>';
+      }
       const club = st.clubs[FC.Game.userTeam(st)];
       const pr = FC.Player.potRange(st, u);
       const wk = st.wk;
@@ -319,7 +324,12 @@
           (hist ? '<div class="stat-grid"><div><b>' + hist.ap + '</b><span>مباراة</span></div><div><b>' + hist.g + '</b><span>هدف</span></div><div><b>' + hist.a + '</b><span>صناعة</span></div><div>' + UI.rating(hist.avg || null) + '<span>المتوسط</span></div><div><b>' + hist.pos + '</b><span>مركز الفريق</span></div><div><b>' + hist.ovr + '</b><span>تقييمك</span></div></div>' : '') +
           '<p class="muted small">حفل الجوائز الكامل يأتي في المرحلة 6.</p></div>';
       }
-      if (rep.newSeason) html += '<div class="banner">🌅 بداية موسم جديد ' + FC.Calendar.seasonLabel(st.season) + ' — عمرك الآن ' + u.age + '</div>';
+      // حفلات الجوائز
+      if (rep.awards) html += '<div class="panel cer-call"><h3>🎤 حفل جوائز الموسم</h3><p class="muted small">أفضل لاعب، الهداف، أفضل شاب، تشكيلة الموسم' + ((u.awards || []).some((a) => a.s === rep.season && !a.global) ? ' — <b class="gold-text">اسمك بين الفائزين!</b>' : '') + '</p><button class="btn gold" data-go="awards" data-p=\'{"kind":"league","season":' + rep.season + ',"back":"report"}\'>ادخل الحفل</button></div>';
+      if (rep.global) html += '<div class="panel cer-call"><h3>🏐 حفل الكرة الذهبية</h3><p class="muted small">أفضل 30 لاعباً في العالم، أفضل لاعب تحت 21، وأفضل حارس' + ((u.awards || []).some((a) => a.s === rep.season && a.global) ? ' — <b class="gold-text">أنت مرشح!</b>' : '') + '</p><button class="btn gold" data-go="awards" data-p=\'{"kind":"global","season":' + rep.season + ',"back":"report"}\'>ادخل الحفل</button></div>';
+      if (rep.retired) html += '<div class="banner gold">🎖️ أعلنت اعتزالك — <button class="link" data-go="legacy">ملخص مسيرتك</button></div>';
+      if (rep.ach && rep.ach.length) html += '<div class="panel"><h3>🏅 إنجازات جديدة</h3>' + rep.ach.map((a) => '<div class="kv"><span>' + a.icon + ' ' + esc(a.name) + '</span><b class="muted small">' + esc(a.desc) + '</b></div>').join('') + '</div>';
+      if (rep.newSeason && !rep.retired) html += '<div class="banner">🌅 بداية موسم جديد ' + FC.Calendar.seasonLabel(st.season) + ' — عمرك الآن ' + u.age + '</div>';
       // التطور
       const ovr = FC.Player.ovr(u);
       html += '<div class="panel"><div class="next-h"><h3>تطورك</h3><span>التقييم <b>' + Math.floor(ovr) + '</b></span></div>';

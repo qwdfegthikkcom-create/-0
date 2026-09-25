@@ -11,7 +11,7 @@
   const FC = G.FC = G.FC || {};
 
   const APP = 'masirat-najm';
-  const VERSION = 5;
+  const VERSION = 6;
   const DB_NAME = 'masirat-najm';
   const STORE = 'kv';
   const LS_PREFIX = 'mn_';
@@ -93,6 +93,11 @@
     // الإصدار 5 (المرحلة 5): الشهرة والأخبار و«نبض» والرعاة ونمط الحياة والغريم (تُنشأ عند التحميل)
     4: (o) => {
       o.v = 5;
+      return o;
+    },
+    // الإصدار 6 (المرحلة 6): الجوائز والإنجازات والاعتزال (تُنشأ عند التحميل)
+    5: (o) => {
+      o.v = 6;
       return o;
     },
   };
@@ -287,6 +292,25 @@
     async remove(slot) {
       await kvDel('slot' + slot);
       await kvDel('meta' + slot);
+    },
+
+    // ================= قاعة المشاهير (تبقى بين المسيرات) =================
+    async hofList() {
+      const list = await kvGet('hof');
+      return Array.isArray(list) ? list : [];
+    },
+    async hofAdd(entry) {
+      const list = await this.hofList();
+      if (list.some((x) => x.id === entry.id)) return list;
+      list.unshift(entry);
+      if (list.length > 60) list.length = 60;
+      await kvSet('hof', list);
+      return list;
+    },
+    async hofRemove(id) {
+      const list = (await this.hofList()).filter((x) => x.id !== id);
+      await kvSet('hof', list);
+      return list;
     },
 
     // آخر خانة استُخدمت (للمتابعة السريعة)

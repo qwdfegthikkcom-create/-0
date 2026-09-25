@@ -62,7 +62,7 @@
       const u = state.user;
       // المنتخب: القائمة تشمل لاعبك (0) إن استُدعي
       if (club.nt) ids = ids.filter((id) => FC.getP(state, id));
-      else if (u && FC.Game && FC.Game.userTeam(state) === clubId) ids.push(0);
+      else if (u && !u.retired && FC.Game && FC.Game.userTeam(state) === clubId) ids.push(0);
       if (!all && FC.Status) ids = ids.filter((id) => FC.Status.available(state, FC.getP(state, id), club.nt));
       return ids;
     },

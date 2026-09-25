@@ -172,8 +172,8 @@
       });
       // ميزانيات الصيف
       if (state.week === B.summer[0]) FC.Econ.setBudgets(state, rng);
-      // عروض لك
-      if (!u.loan && !u.nextContract) {
+      // عروض لك (لا عروض بعد الاعتزال)
+      if (!u.retired && !u.loan && !u.nextContract) {
         const yl = Tr.yearsLeft(state);
         const inW = Tr.inWindow(state);
         const preFree = !inW && u.contract && !u.contract.youth && yl <= B.freeMonths / 12 && FC.Calendar.phase(state.week) === 'season';

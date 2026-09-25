@@ -66,6 +66,8 @@
       const u = state.user;
       const inj = St.make(rng);
       inj.where = where || 'match';
+      // الرباط الصليبي بعد 35 قد ينهي المسيرة
+      if (inj.k === 'acl' && FC.BAL.legacy && u.age >= FC.BAL.legacy.injuryAge && rng.chance(FC.BAL.legacy.injuryEnd)) inj.careerEnd = true;
       inj.season = state.season;
       inj.week = state.week;
       u.inj = inj;
@@ -185,7 +187,7 @@
     // nt: للمنتخب (الإيقافات المحلية وغياب البطولة لا تنطبق)
     available(state, p, nt) {
       if (nt) return p.id === 0 ? !p.inj : !(p.inj > 0);
-      if (p.id === 0) return !p.inj && !(p.ban > 0) && !p.freeAgent && !p.away;
+      if (p.id === 0) return !p.inj && !(p.ban > 0) && !p.freeAgent && !p.away && !p.retired;
       return !(p.inj > 0) && !(p.ban > 0) && !p.away;
     },
 
@@ -369,7 +371,7 @@
     // تعيين قائد الفريق الأول لناديك (بداية الموسم ومنتصفه)
     captainReview(state, rng) {
       const u = state.user;
-      if (u.team === 'Y') return;
+      if (u.team === 'Y' || u.retired) return;
       const club = state.clubs[u.club];
       const ids = FC.Select.squadIds(state, u.club, true);
       let best = null;

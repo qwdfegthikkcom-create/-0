@@ -39,8 +39,15 @@
       FC.Msg.add(state, 'academy', 'مرحباً بك في الأكاديمية', FC.TXT.msg(rng, 'welcome', { c: club.name, city: state.user.city }));
       const pr = FC.Player.potRange(state, state.user);
       FC.Msg.add(state, 'scout', 'تقرير الكشافين', FC.TXT.msg(rng, 'scout', { lo: pr[0], hi: pr[1] }));
-      // الشهرة والغريم وبقية الحياة خارج الملعب
+      // الشهرة والغريم وبقية الحياة خارج الملعب، والأرقام القياسية
       if (FC.Life) FC.Life.ensure(state);
+      if (FC.Legacy) FC.Legacy.ensure(state);
+      // «ابن الأسطورة»
+      if (setup.legend && FC.Life) {
+        state.user.fame = FC.BAL.legacy.sonFame;
+        state.user.followers = FC.Life.followersOf(state.user.fame);
+        FC.Msg.add(state, 'family', 'رسالة من والدك', 'يا بني، اسم عائلتنا يعرفه الجميع في الملاعب. لا تحمل ضغط اسمي، اصنع قصتك أنت. أنا فخور بك. — ' + setup.legend.name);
+      }
       return state;
     },
 
@@ -50,6 +57,7 @@
       const u = state.user;
       const team = Game.userTeam(state);
       const out = [];
+      if (u.retired) return out; // اعتزلت: العالم يستمر بدونك
       // أثناء بطولة دولية في يناير تغيب عن مباريات ناديك
       if (!u.away) {
         const lg = Game.userLeague(state);
@@ -273,6 +281,8 @@
           const I = (u.intl = u.intl || FC.Nat.emptyIntl());
           I.caps++;
           I.g += x.g;
+          I.sc = (I.sc || 0) + 1; // مباريات هذا الموسم
+          I.sg = (I.sg || 0) + x.g;
           I.a += x.a;
           I.mn += mins;
           I.rs += r;
@@ -344,6 +354,8 @@
       if (kind !== 'lg') summary.tie = Game.tieOutcome(state, m.ref, S.id);
       // الشهرة والأخبار والمنشور والمقابلة
       if (FC.Life) FC.Life.afterMatch(state, m, summary);
+      // الأرقام القياسية والإنجازات
+      if (FC.Legacy) summary.ach = FC.Legacy.afterMatch(state, summary);
       // بقية مباريات اليوم في العالم، ثم استعداد لمباراة منتصف الأسبوع إن وجدت
       Game.playDay(state, m.ref && m.ref.d != null ? m.ref.d : 0);
       const next = Game.userFixtureRef(state);
@@ -393,33 +405,42 @@
       FC.Comp.weekMatches(state, state.week).forEach((ref) => {
         if (ref.lg === lg) rep.results.push(FC.Comp.fixture(state, ref).slice());
       });
-      // التطور
-      rep.ups = FC.Growth.weekUser(state);
-      u.lastUps = rep.ups;
-      // الاستشفاء والمعنويات للأسبوع القادم
       const BS = FC.BAL.status;
-      u.fit = Math.min(BS.fitCap, u.fit + BS.fitWeekly + (FC.Life && FC.Life.has(state, 'nutri') ? FC.BAL.life.nutriFit : 0));
-      // الإصابات والجاهزية ولاعبو الذكاء الاصطناعي
-      FC.Status.sharpWeekly(state);
-      FC.Status.weeklyUser(state, rng);
+      const active = !u.retired;
+      if (active) {
+        // التطور
+        rep.ups = FC.Growth.weekUser(state);
+        u.lastUps = rep.ups;
+        // الاستشفاء والمعنويات للأسبوع القادم
+        u.fit = Math.min(BS.fitCap, u.fit + BS.fitWeekly + (FC.Life && FC.Life.has(state, 'nutri') ? FC.BAL.life.nutriFit : 0));
+        FC.Status.sharpWeekly(state);
+        FC.Status.weeklyUser(state, rng);
+      }
+      // الإصابات ولاعبو الذكاء الاصطناعي
       FC.Status.weeklyAI(state);
-      FC.Status.coachReview(state, rng);
-      if (state.week === FC.BAL.coach.captainWeek) FC.Status.captainReview(state, rng);
-      // المال والانتقالات
-      FC.Econ.weekly(state);
+      if (active) {
+        FC.Status.coachReview(state, rng);
+        if (state.week === FC.BAL.coach.captainWeek) FC.Status.captainReview(state, rng);
+        // المال والانتقالات
+        FC.Econ.weekly(state);
+      }
       FC.Transfer.weekly(state, rng);
-      // الحياة خارج الملعب: الرعاة، الخدمات، الأحداث، الأخبار، الغربة
-      if (FC.Life) FC.Life.weekly(state, rng, rep);
-      u.morale += u.morale > BS.moraleMid ? -BS.moraleDrift : u.morale < BS.moraleMid ? BS.moraleDrift : 0;
-      // التصعيد
-      if (u.team === 'Y') Game.checkPromotion(state, rep);
+      if (active) {
+        // الحياة خارج الملعب: الرعاة، الخدمات، الأحداث، الأخبار، الغربة
+        if (FC.Life) FC.Life.weekly(state, rng, rep);
+        // الأرقام القياسية والإنجازات
+        if (FC.Legacy) rep.ach = FC.Legacy.weekly(state);
+        u.morale += u.morale > BS.moraleMid ? -BS.moraleDrift : u.morale < BS.moraleMid ? BS.moraleDrift : 0;
+        // التصعيد
+        if (u.team === 'Y') Game.checkPromotion(state, rep);
+      }
       // الاستدعاءات الدولية قبل الأسبوع الدولي القادم
       if (FC.Nat) {
         const nw = state.week + 1;
         if (nw < FC.Calendar.WEEKS && (FC.Nat.windowWeeks(state).indexOf(nw) >= 0 || FC.Nat.natFixtures(state, nw).length)) FC.Nat.callUps(state, nw);
       }
       // ملاحظات المدرب كل 8 أسابيع في الموسم
-      if (FC.Calendar.phase(state.week) === 'season' && state.week % 8 === 0 && u.minHist.length >= 3) {
+      if (active && FC.Calendar.phase(state.week) === 'season' && state.week % 8 === 0 && u.minHist.length >= 3) {
         const share = U.avg(u.minHist);
         const form = FC.Player.formOf(u);
         if (share < 0.2) FC.Msg.add(state, 'coach', 'حديث مع المدرب', FC.TXT.msg(rng, 'coachNoPlay', {}), { reply: 'coachBench' });
@@ -445,8 +466,11 @@
 
     // أسبوع كامل تلقائي (للمحاكاة السريعة والاختبار)
     autoWeek(state) {
+      if (state.user.retired) return Game.endWeek(state);
       FC.Transfer.autoDecide(state, FC.rngOf(state));
       if (FC.Life) FC.Life.autoDecide(state);
+      // قرار الاعتزال التلقائي في نهاية الموسم
+      if (FC.Legacy && state.week === FC.BAL.cal.seasonEndWeek && FC.Legacy.autoRetire(state)) state.user.retirePlan = true;
       if (!state.wk.planned) Game.applyPlan(state, Game.autoPlan(state));
       let guard = 0;
       while (Game.userFixtureRef(state) && guard++ < 4) Game.simUserMatchAuto(state);
@@ -501,7 +525,7 @@
         snap.champs[id] = champ;
         const top = FC.Comp.leaders(state, id, 'sG', 1)[0];
         if (top) snap.scorers[id] = { pid: top.pid, name: top.pid === 0 ? FC.Player.fullName(u) : FC.Player.fullName(state.players[top.pid]), club: top.club, g: top.v };
-        if (id === myLg) {
+        if (id === myLg && !u.retired) {
           const L = state.leagues[id];
           if (champ === Game.userTeam(state)) {
             FC.Msg.add(state, 'club', 'أبطال!', FC.TXT.msg(rng, 'userChampion', { l: L.name, c: state.clubs[champ].name }), { big: 'champion' });
@@ -515,6 +539,15 @@
         }
       }
       state.history.seasons.push(snap);
+      // جوائز الدوريات (أفضل لاعب، الهداف، الشاب، تشكيلة الموسم، أفضل لاعب في ناديك)
+      if (FC.Awards) {
+        FC.Awards.leagueAwards(state, snap);
+        if (rep) rep.awards = true;
+      }
+      if (u.retired) {
+        if (rep) rep.snap = snap;
+        return;
+      }
       const s = u.season;
       const avg = s.ap ? U.round1(s.rs / s.ap) : 0;
       u.history.push({
@@ -526,6 +559,11 @@
       });
       FC.Growth.seasonPotential(state);
       FC.Msg.add(state, 'coach', 'نهاية الموسم', FC.TXT.msg(rng, 'seasonEnd', { s: FC.Calendar.seasonLabel(state.season), ap: s.ap, g: s.g, a: s.a, r: avg || '—' }));
+      if (FC.Legacy) {
+        FC.Legacy.seasonEnd(state);
+        // قرار الاعتزال متاح بعد 33 (يُنفّذ عند نهاية الصيف)
+        if (FC.Legacy.canRetire(state) && !u.retirePlan) FC.Msg.add(state, 'family', 'التفكير في المستقبل', 'عمرك الآن ' + u.age + ' عاماً. يمكنك إعلان اعتزالك من ملفك (يُنفّذ مع نهاية الموسم)، أو الاستمرار موسماً آخر.');
+      }
       if (rep) rep.snap = snap;
     },
 
@@ -544,6 +582,19 @@
     rollover(state, rep) {
       const rng = FC.rngOf(state);
       const u = state.user;
+      // الجوائز العالمية (بعد بطولات الصيف) قبل تصفير الإحصائيات
+      if (FC.Awards) {
+        FC.Awards.globalAwards(state);
+        if (rep) rep.global = true;
+      }
+      // الاعتزال (قرارك أو إجباري)
+      if (FC.Legacy && !u.retired) {
+        const forced = FC.Legacy.forcedReason(state);
+        if (u.retirePlan || forced) {
+          FC.Legacy.retire(state, forced || 'choice');
+          if (rep) rep.retired = true;
+        }
+      }
       // تطور لاعبي الذكاء الاصطناعي وأعمارهم
       if (FC.Cups) FC.Cups.archive(state);
       if (FC.Life) FC.Life.rivalSeason(state);
@@ -570,8 +621,12 @@
       u.seasonStartAttrs = U.clone(u.attrs);
       u.fit = 100;
       FC.Status.newSeason(state);
+      if (u.intl) {
+        u.intl.sc = 0;
+        u.intl.sg = 0;
+      }
       // دوري الشباب
-      if (u.team === 'Y' && u.age >= FC.BAL.promote.autoAge) Game.promote(state, rep);
+      if (!u.retired && u.team === 'Y' && u.age >= FC.BAL.promote.autoAge) Game.promote(state, rep);
       if (u.team === 'Y') FC.Regens.refreshYouth(state, rng);
       else if (state.leagues.YTH) {
         state.leagues.YTH.clubs.forEach((cid) => {
@@ -583,13 +638,12 @@
       state.season++;
       state.week = 0;
       u.away = false;
-      FC.Transfer.rollover(state, rng);
+      if (!u.retired) FC.Transfer.rollover(state, rng);
       FC.Comp.newSeason(state);
       if (FC.Cups) FC.Cups.newSeason(state);
-      if (FC.Life) {
-        FC.Life.rivalMove(state, rng);
-        FC.Life.newSeason(state);
-      }
+      if (FC.Life) FC.Life.rivalMove(state, rng);
+      if (u.retired) return;
+      if (FC.Life) FC.Life.newSeason(state);
       FC.Msg.add(state, 'club', 'موسم جديد', FC.TXT.msg(rng, 'newSeason', { s: FC.Calendar.seasonLabel(state.season), age: u.age }));
       FC.Status.captainReview(state, rng);
       const pr = FC.Player.potRange(state, u);

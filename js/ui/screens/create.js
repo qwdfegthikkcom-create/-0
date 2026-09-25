@@ -28,9 +28,23 @@
     return FC.DATA.leagues.some((l) => l.nat === nat);
   }
 
+  // «ابن الأسطورة»: اختر أحد أساطير قاعة المشاهير (اسم العائلة والجنسية منه)
+  function legendBox(d) {
+    const all = UI.hofCache || [];
+    const list = all.filter((e) => e.tier >= 2);
+    if (!list.length) return all.length ? '<p class="muted small">👑 «ابن الأسطورة» يصبح متاحاً عندما يعتزل أحد لاعبيك بتصنيف «نجم» أو أعلى.</p>' : '';
+    return (
+      '<div class="panel legend-pick"><h3>👑 ابن الأسطورة (اختياري)</h3><p class="muted small">ابدأ كابن أحد أساطيرك: اسم عائلته وجنسيته، إمكانات أعلى قليلاً، وشهرة من البداية… وضغط أكبر!</p><div class="chips-wrap">' +
+      '<button class="chip' + (!d.legend ? ' on' : '') + '" data-legend="">بدون</button>' +
+      list.map((e) => '<button class="chip' + (d.legend && d.legend.id === e.id ? ' on' : '') + '" data-legend="' + esc(e.id) + '">' + e.tierIcon + ' ' + UI.flag(e.nat, 11) + ' ' + esc(e.name) + '</button>').join('') +
+      '</div></div>'
+    );
+  }
+
   function stepIdentity(d) {
     const n = FC.DATA.nations[d.nat];
     return (
+      legendBox(d) +
       '<div class="panel form">' +
       '<label>الاسم الأول<input name="fn" maxlength="16" value="' + esc(d.fn) + '" placeholder="مثال: علي" autocomplete="off"></label>' +
       '<label>اسم العائلة أو الأب<input name="ln" maxlength="18" value="' + esc(d.ln) + '" placeholder="مثال: حسين" autocomplete="off"></label>' +
@@ -190,6 +204,17 @@
             },
           });
           return;
+        }
+        if (t.dataset.legend != null) {
+          const e = (UI.hofCache || []).find((x) => x.id === t.dataset.legend);
+          d.legend = e ? { id: e.id, name: e.name, ln: e.ln, nat: e.nat, tier: e.tier } : null;
+          if (e) {
+            d.ln = e.ln;
+            d.nat = e.nat;
+            d.city = FC.DATA.nations[d.nat].cities[0];
+            d.startLeague = hasLeague(d.nat) ? null : 'KSA';
+          }
+          return rerender();
         }
         if (t.dataset.pos) {
           d.pos = t.dataset.pos;

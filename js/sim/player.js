@@ -190,6 +190,8 @@
       const pc = C.pot[setup.diff] || C.pot.real;
       let pot = Math.round(U.clamp(rng.normal(pc.mu, pc.sd), pc.min, pc.max));
       if (setup.legacy) pot = Math.min(pc.max + 2, pot + 3);
+      // «ابن الأسطورة»: إمكانات أعلى قليلاً
+      if (setup.legend) pot = Math.min(pc.max + 3, pot + FC.BAL.legacy.sonPot);
       const wf = [1, 2, 3, 4, 5][rng.weighted([5, 25, 45, 20, 5])];
       const skBase = role === 'W' || role === 'CAM' ? [2, 10, 40, 35, 13] : role === 'ST' ? [5, 25, 45, 20, 5] : [15, 40, 35, 9, 1];
       const sk = role === 'GK' ? 1 : [1, 2, 3, 4, 5][rng.weighted(skBase)];
@@ -283,7 +285,7 @@
         if (!u.bank) u.bank = [];
         if (u.agent === undefined) u.agent = null;
         if (!u.clubHist) u.clubHist = [];
-        if (!u.contract && !u.freeAgent && FC.Transfer) {
+        if (!u.contract && !u.freeAgent && !u.retired && FC.Transfer) {
           if (u.team === 'Y') FC.Transfer.youthContract(state);
           else FC.Transfer.firstPro(state);
         }
@@ -296,6 +298,8 @@
       if (FC.Cups && !state.comps) FC.Cups.upgrade(state);
       // المرحلة 5: الشهرة والرعاة ونمط الحياة والغريم
       if (FC.Life && u) FC.Life.ensure(state);
+      // المرحلة 6: الأرقام القياسية والإنجازات والجوائز
+      if (FC.Legacy && u) FC.Legacy.ensure(state);
     },
   });
 })(globalThis);

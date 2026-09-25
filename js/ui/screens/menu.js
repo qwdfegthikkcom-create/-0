@@ -27,13 +27,16 @@
         '<button class="btn gold big" data-act="new">مسيرة جديدة</button>' +
         '<button class="btn big hidden" data-act="continue">متابعة</button>' +
         '<button class="btn big" data-go="saves">تحميل</button>' +
+        '<button class="btn big ghost" data-go="hof">قاعة المشاهير</button>' +
         '<button class="btn big ghost" data-go="settings">الإعدادات</button>' +
         '</div>' +
-        '<div class="menu-foot">المرحلة 5: الكؤوس والمنتخبات والشهرة والحياة خارج الملعب</div>' +
+        '<div class="menu-foot">المرحلة 6: الجوائز والاعتزال والإرث وقاعة المشاهير</div>' +
         '</div>'
       );
     },
     bind(el) {
+      // قاعة المشاهير (لـ«ابن الأسطورة»)
+      if (FC.Save.hofList) FC.Save.hofList().then((l) => (UI.hofCache = l)).catch(() => {});
       // زر المتابعة يظهر إذا وُجد حفظ
       const last = FC.Save.lastSlot();
       const contBtn = el.querySelector('[data-act=continue]');

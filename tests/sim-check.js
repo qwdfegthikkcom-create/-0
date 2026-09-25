@@ -245,6 +245,24 @@ check('مهاجم عادي (أهداف/موسم)', U.avg(avgStrikers), 8, 15, f1
   check('الغريم يلعب بانتظام (مواسم بـ 15+ مباراة)', played, Math.min(10, SEASONS - 6), 99, (x) => String(x), R ? 'من ' + R.hist.length + ' موسماً' : 'لا غريم');
   check('الأحداث المعلّقة لا تتراكم', state.user.event && state.user.event.exp < state.week - 4 ? 1 : 0, 0, 0, (x) => String(x));
 }
+// ====================== الجوائز والإرث ======================
+{
+  const H = state.history.seasons.filter((h) => h.awards && h.global);
+  const lgN = FC.DATA.leagueOrder.length;
+  check('جوائز كل الدوريات مُنحت كل موسم', H.filter((h) => FC.DATA.leagueOrder.every((lg) => h.awards[lg] && h.awards[lg].poty && (h.pruned || h.awards[lg].tots.length === 11))).length / Math.max(1, H.length), 1, 1, pct, H.length + ' موسماً × ' + lgN + ' دوريات (التفاصيل كاملة لآخر ' + FC.BAL.awards.keepFull + ' مواسم)');
+  const bw = H.map((h) => h.global.ballon[0]).filter(Boolean);
+  const big5 = bw.filter((r) => { const c = state.clubs[r.club]; return c && STRONG.indexOf(c.lg) >= 0; }).length;
+  check('الكرة الذهبية لنجوم الدوريات الخمس الكبرى', big5 / Math.max(1, bw.length), 0.7, 1, pct, 'عينة ' + bw.length);
+  check('قائمة الكرة الذهبية 30 لاعباً (آخر موسم)', H.length ? H[H.length - 1].global.ballon.length : 0, 30, 30, f1, 'المواسم القديمة تحتفظ بأفضل 10');
+  const potyG = [];
+  H.forEach((h) => STRONG.forEach((lg) => h.awards[lg] && potyG.push(h.awards[lg].poty.g)));
+  check('أهداف أفضل لاعب في الدوري (كل البطولات)', U.avg(potyG), 10, 45, f1, 'الدوريات الكبرى');
+  const u = state.user;
+  const L = state.legacy;
+  check('اعتزالك في عمر واقعي (أو مستمر)', u.retired ? u.retired.age : 36, 33, 40, (x) => String(x), u.retired ? 'السبب: ' + u.retired.reason : 'لم يعتزل بعد');
+  if (L) check('تصنيف الإرث محسوب', L.tier >= 0 && L.pts > 0 ? 1 : 0, 1, 1, (x) => (x ? 'نعم' : 'لا'), L.tierIcon + ' ' + L.tierName + ' (' + L.pts + ' نقطة، ' + L.ach + ' إنجازاً)');
+  check('الإنجازات المفتوحة في المسيرة', Object.keys(u.ach || {}).length, 5, FC.Legacy.ACH.length, (x) => String(x));
+}
 check('أبطأ أسبوع محاكاة (ms)', maxWeekMs, 0, 300, f1, 'المتوسط ' + f1(sumWeekMs / weeks) + 'ms');
 const outfieldRet = retireAges.filter((r) => !r.gk).map((r) => r.age);
 const gkRet = retireAges.filter((r) => r.gk).map((r) => r.age);

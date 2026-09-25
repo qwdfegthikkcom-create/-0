@@ -75,12 +75,9 @@
         })() +
         '</div>' +
         '</div>' +
-        (function () {
-          const T = u.trophies || [];
-          if (!T.length) return '<div class="panel"><h3>خزانة الألقاب</h3><p class="muted">لا ألقاب بعد — الدوري والكأس والبطولات القارية والدولية تنتظرك.</p></div>';
-          const icon = { league: '🏆', cup: '🥇', cont: '⭐', nt: '🌍' };
-          return '<div class="panel"><h3>خزانة الألقاب (' + T.length + ')</h3><div class="trophies">' + T.slice().reverse().map((t) => '<div class="trophy"><span class="tr-i">' + (icon[t.k] || '🏆') + '</span><b>' + esc(t.name) + '</b><small class="muted">' + FC.Calendar.seasonLabel(t.s) + (st.clubs[t.team] ? ' · ' + esc(st.clubs[t.team].short) : '') + '</small></div>').join('') + '</div></div>';
-        })() +
+        (UI.retirePanel ? UI.retirePanel(st) : '') +
+        (UI.cabinet ? UI.cabinet(st) : '') +
+        (UI.achPanel ? UI.achPanel(st) : '') +
         (UI.rivalCard ? UI.rivalCard(st) : '') +
         '<div class="panel"><h3>السمات <small class="muted">(الأسهم = التغير منذ بداية الموسم، والمميزة ذهبياً تؤثر على تقييم مركزك)</small></h3><div class="attrs">' + attrHtml + '</div></div>' +
         (function () {
@@ -107,6 +104,13 @@
         '<div class="panel"><h3>سجل المواسم</h3>' + (hist ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>الموسم</th><th class="l">الفريق</th><th>م</th><th>هـ</th><th>ص</th><th>التقييم</th><th>OVR</th></tr></thead><tbody>' + hist + '</tbody></table></div>' : '<p class="muted">موسمك الأول ما زال جارياً.</p>') + '</div>' +
         (u.log.length ? '<div class="panel"><h3>مبارياتك هذا الموسم</h3><div class="fixtures">' + u.log.slice().reverse().map((l) => '<div class="fx-row' + (l.k === 'nat' ? ' nat' : l.k === 'cup' ? ' cup' : '') + '"><span class="fx-d">' + esc(UI.weekDate(st, l.w)) + (l.k && l.k !== 'lg' && st.comps && st.comps[l.c] ? '<small>' + esc(st.comps[l.c].short) + '</small>' : '') + '</span><span class="fx-o">' + UI.badge(st.clubs[l.opp], 16) + ' ' + esc(st.clubs[l.opp] ? st.clubs[l.opp].short : '') + '</span>' + UI.score(l.h ? l.gf : l.ga, l.h ? l.ga : l.gf) + '<span class="muted small">' + (l.mn ? l.mn + "'" : 'لم يشارك') + (l.g ? ' ⚽' + l.g : '') + (l.a ? ' 🅰️' + l.a : '') + '</span>' + UI.rating(l.r) + '</div>').join('') + '</div></div>' : '')
       );
+    },
+    bind(el) {
+      // الاعتزال
+      el.addEventListener('click', (ev) => {
+        const t = ev.target.closest('[data-act]');
+        if (t && /^(retirePlan|unretire|retireNow)$/.test(t.dataset.act)) UI.retireAct(t.dataset.act);
+      });
     },
   };
 })(globalThis);
