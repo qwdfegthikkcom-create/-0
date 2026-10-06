@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: "Cairo"; src: url(fonts/cairo-arabic-wght-normal.woff2) format("woff2"); font-weight: 200 1000; }
+@font-face { font-family: "Cairo"; src: url(fonts/cairo-latin-wght-normal.woff2) format("woff2"); font-weight: 200 1000;
+  unicode-range: U+0000-00FF, U+2010-2027, U+2190-21FF, U+2713; }
+:root { --bg: #0a0a0f; --panel: #15151d; --line: #2a2a36; --ink: #f4f2ec; --dim: #8d8a99; --acc: #c8ff3e; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); font-family: "Cairo"; color: var(--ink); }
+#bg { position: absolute; inset: 0; background:
+  radial-gradient(900px 900px at 50% 45%, rgba(200,255,62,.07), transparent 70%),
+  linear-gradient(var(--bg), var(--bg)); }
+#grid { position: absolute; inset: -120px; opacity: .35;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 120px 120px; mask-image: radial-gradient(circle at 50% 45%, #000 20%, transparent 70%); }
+.scene { position: absolute; inset: 0; display: none; will-change: transform, opacity, filter; }
+.abs { position: absolute; }
+.center { left: 0; right: 0; text-align: center; }
+.h1 { font-weight: 900; font-size: 120px; line-height: 1.15; }
+.h2 { font-weight: 800; font-size: 84px; line-height: 1.25; }
+.h3 { font-weight: 700; font-size: 52px; line-height: 1.3; }
+.small { font-weight: 600; font-size: 38px; color: var(--dim); }
+.acc { color: var(--acc); }
+.pill { display: inline-block; padding: 8px 34px; border: 2px solid var(--line); border-radius: 60px; font-weight: 700; font-size: 40px; color: var(--dim); }
+.card { position: absolute; background: var(--panel); border: 2px solid var(--line); border-radius: 28px; }
+.word { display: inline-block; }
+.strike { position: absolute; height: 12px; background: var(--acc); border-radius: 6px; transform-origin: 100% 50%; }
+svg { position: absolute; overflow: visible; }
+#wipe { position: absolute; top: 0; bottom: 0; width: 1400px; background: var(--acc); display: none; }
+#fade { position: absolute; inset: 0; background: #000; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="bg"></div><div id="grid"></div>
+<div id="stage"></div>
+<div id="wipe"></div>
+<div id="fade"></div>
+<script>
+// اسم العلامة: يبقى فارغ لحد ما يتأكد. إذا انكتب يظهر بالخاتمة.
+const BRAND = '';
+
+// ---------- أدوات ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const oc = x => 1 - Math.pow(1 - clamp(x), 3);
+const io = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const ob = x => { x = clamp(x); const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+// تقدّم من a إلى a+d بالثواني المحلية
+const p = (lt, a, d = .35, f = oc) => f((lt - a) / d);
+const stage = document.getElementById('stage');
+const S = [];
+function scene(a, b, tin, tout, html, update) {
+  const el = document.createElement('div'); el.className = 'scene'; el.innerHTML = html; stage.appendChild(el);
+  const q = s => el.querySelector(s), qa = s => [...el.querySelectorAll(s)];
+  S.push({ a, b, tin, tout, el, update: lt => update(lt, q, qa, b - a) });
+}
+function show(e, o, tx = 0, ty = 0, s = 1) {
+  e.style.opacity = o; e.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+}
+// نص كلمة كلمة يطلع من تحت
+function words(text, cls = '') { return text.split(' ').map(w => `<span class="word ${cls}">${w}</span>`).join(' '); }
+function reveal(list, lt, start, gap = .07, d = .35, dy = 50) {
+  list.forEach((w, i) => { const k = p(lt, start + i * gap, d); show(w, k, 0, (1 - k) * dy); });
+}
+const icon = {
+  box: '<path d="M-60 -30 L0 -62 L60 -30 L60 40 L0 72 L-60 40 Z M-60 -30 L0 2 L60 -30 M0 2 L0 72" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>',
+  compass: '<circle r="44" fill="none" stroke="currentColor" stroke-width="7"/><path d="M14 -14 L-8 -8 L-14 14 L8 8 Z" fill="currentColor"/>',
+  bulb: '<path d="M-26 22 C-48 4 -44 -40 0 -44 C44 -40 48 4 26 22 L22 34 L-22 34 Z" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/><path d="M-16 48 H16" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
+  play: '<rect x="-46" y="-36" width="92" height="72" rx="14" fill="none" stroke="currentColor" stroke-width="7"/><path d="M-10 -16 L18 0 L-10 16 Z" fill="currentColor"/>',
+  target: '<circle r="44" fill="none" stroke="currentColor" stroke-width="7"/><circle r="24" fill="none" stroke="currentColor" stroke-width="7"/><circle r="6" fill="currentColor"/>',
+  cart: '<path d="M-46 -30 H-30 L-18 22 H34 L44 -14 H-24" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="-12" cy="38" r="7" fill="currentColor"/><circle cx="28" cy="38" r="7" fill="currentColor"/>',
+  hourglass: '<path d="M-34 -50 H34 M-34 50 H34 M-26 -50 C-26 -10 26 10 26 50 M26 -50 C26 -10 -26 10 -26 50" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>',
+};
+
+// ---------- 1. الهوك: يبيع ----------
+scene(0, 1.52, 'cut', 'cut', `
+  <svg width="1080" height="1920" style="left:0;top:0"><path id="spark" d="M60 1420 C260 1400 330 1300 470 1290 S700 1150 820 1060 S960 900 1030 820" fill="none" stroke="#c8ff3e" stroke-opacity=".35" stroke-width="10" stroke-linecap="round"/></svg>
+  <div class="abs center" style="top:600px"><span class="pill" id="p1">متجرك</span></div>
+  <div class="abs center h1 acc" id="sell" style="top:700px;font-size:260px">يبيع</div>
+  <div class="abs center h2" id="really" style="top:1030px">فعلاً</div>
+  ${[0, 1, 2].map(i => `<div class="card ord" style="width:420px;height:110px;top:${330 + i * 1120 % 1200}px;${i % 2 ? 'left:70px' : 'right:70px'};display:flex;align-items:center;gap:22px;padding:0 30px">
+     <span style="width:52px;height:52px;border-radius:50%;background:var(--acc);color:#0a0a0f;font:900 40px Cairo;display:flex;align-items:center;justify-content:center">+</span>
+     <span class="h3" style="font-size:40px">طلب جديد</span></div>`).join('')}
+`, (lt, q, qa) => {
+  const sp = q('#spark'), L = 1400; sp.style.strokeDasharray = L; sp.style.strokeDashoffset = L * (1 - p(lt, 0, 1.4, io));
+  show(q('#p1'), p(lt, .05, .3), 0, (1 - p(lt, .05, .3)) * 30);
+  const k = ob((lt - .1) / .38); show(q('#sell'), clamp(k * 3), 0, 0, lerp(1.6, 1, k));
+  show(q('#really'), p(lt, .55, .3), 0, (1 - p(lt, .55, .3)) * 40);
+  qa('.ord').forEach((c, i) => { const k = p(lt, .3 + i * .35, .35, ob); show(c, clamp(k * 2), (i % 2 ? -1 : 1) * (1 - k) * 200, 0); });
+});
+
+// ---------- 2. كم إعلان زيادة ----------
+scene(1.52, 3.80, 'cut', 'up', `
+  <div class="abs center h3" id="dont" style="top:300px;color:var(--dim)">لا تدوّر على أحد يسوّي لك</div>
+  <div class="abs center h1" id="ads" style="top:390px">كم إعلان زيادة؟</div>
+  <div class="strike" id="st" style="top:470px;left:110px;width:860px"></div>
+  ${Array.from({ length: 9 }, (_, i) => {
+    const x = 150 + (i % 3) * 270, y = 760 + Math.floor(i / 3) * 300, r = [-8, 5, -3, 7, -6, 4, 9, -5, 2][i];
+    return `<div class="card ad" data-r="${r}" style="left:${x}px;top:${y}px;width:240px;height:260px;padding:26px">
+      <div style="height:110px;border-radius:14px;background:#22222d"></div>
+      <div style="height:16px;width:80%;background:#2c2c38;border-radius:8px;margin-top:22px"></div>
+      <div style="height:16px;width:55%;background:#2c2c38;border-radius:8px;margin-top:14px"></div>
+      <div class="small" style="font-size:26px;margin-top:10px">إعلان</div></div>`;
+  }).join('')}
+`, (lt, q, qa) => {
+  show(q('#dont'), p(lt, 0, .3), 0, (1 - p(lt, 0, .3)) * 30);
+  const k = p(lt, .5, .4, ob); show(q('#ads'), clamp(k * 2), 0, 0, lerp(.8, 1, k));
+  qa('.ad').forEach((c, i) => {
+    const k = p(lt, .15 + i * .12, .3, ob), r = +c.dataset.r;
+    c.style.opacity = clamp(k * 2) * lerp(1, .22, p(lt, 1.75, .3));
+    c.style.transform = `translateY(${(1 - k) * 160}px) rotate(${r * k}deg) scale(${lerp(.7, 1, k)})`;
+  });
+  const s = p(lt, 1.6, .3, io); q('#st').style.transform = `scaleX(${s})`; q('#st').style.opacity = s > 0 ? 1 : 0;
+});
+
+// ---------- 3. شريك يعرف يكبّر ----------
+scene(3.80, 6.20, 'up', 'zoom', `
+  <div class="abs center h3" id="look" style="top:320px;color:var(--dim)">دوّر على</div>
+  <div class="abs center h1" id="partner" style="top:400px;font-size:170px">شريك</div>
+  <svg width="1080" height="1920" style="left:0;top:0">
+    <circle id="c1" cx="540" cy="1200" r="110" fill="none" stroke="#f4f2ec" stroke-width="10"/>
+    <circle id="c2" cx="540" cy="1200" r="110" fill="none" stroke="#c8ff3e" stroke-width="10"/>
+    <path id="arrow" d="M540 1200 L540 820 M470 900 L540 820 L610 900" fill="none" stroke="#c8ff3e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="abs center h2 acc" id="grow" style="top:1380px">يعرف يكبّر</div>
+`, (lt, q) => {
+  show(q('#look'), p(lt, .05, .3), 0, (1 - p(lt, .05, .3)) * 30);
+  const k = p(lt, .3, .4, ob); show(q('#partner'), clamp(k * 2), 0, 0, lerp(.75, 1, k));
+  const m = p(lt, .3, 1.0, io), sep = lerp(260, 50, m);
+  q('#c1').setAttribute('cx', 540 + sep); q('#c2').setAttribute('cx', 540 - sep);
+  [q('#c1'), q('#c2')].forEach(c => c.style.opacity = p(lt, .2, .3));
+  const a = q('#arrow'), L = 560; a.style.strokeDasharray = L; a.style.strokeDashoffset = L * (1 - p(lt, 1.25, .5, io));
+  show(q('#grow'), p(lt, 1.45, .35), 0, (1 - p(lt, 1.45, .35)) * 40);
+});
+
+// ---------- 4. منتجك وأرقامك ----------
+scene(6.20, 8.30, 'zoom', 'cut', `
+  <div class="abs center h2" id="t4" style="top:300px">${words('نبدأ من منتجك')}<br>${words('وأرقامك', 'acc')}</div>
+  <div class="card" id="prod" style="left:340px;top:720px;width:400px;height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px">
+    <svg width="0" height="0" style="position:relative;left:0;top:0;color:#c8ff3e;width:140px;height:150px" viewBox="-70 -75 140 150">${icon.box}</svg>
+    <div class="h3">منتجك</div></div>
+  ${[['الطلبات', 1284], ['الزوار', 18950], ['التحويل', 2.4]].map(([l, v], i) => `
+    <div class="card kpi" data-v="${v}" style="top:1180px;left:${80 + i * 315}px;width:290px;height:230px;padding:30px 26px">
+      <div class="small">${l}</div><div class="h2 num" style="font-size:70px;margin-top:14px;direction:ltr;text-align:right">0</div></div>`).join('')}
+`, (lt, q, qa) => {
+  reveal(qa('#t4 .word'), lt, 0, .1);
+  const k = p(lt, .25, .4, ob); show(q('#prod'), clamp(k * 2), 0, (1 - k) * 80, lerp(.8, 1, k));
+  qa('.kpi').forEach((c, i) => {
+    const k = p(lt, .7 + i * .15, .35, ob); show(c, clamp(k * 2), 0, (1 - k) * 100);
+    const v = +c.dataset.v, x = p(lt, .8 + i * .15, 1.0, io), n = v * x;
+    c.querySelector('.num').textContent = v < 10 ? n.toFixed(1) + '%' : Math.round(n).toLocaleString('en-US');
+  });
+});
+
+// ---------- 5. وش يبيع أكثر ----------
+scene(8.30, 9.30, 'cut', 'cut', `
+  <div class="abs center h1" id="t5" style="top:330px">وش يبيع <span class="acc">أكثر؟</span></div>
+  ${[.45, .62, 1, .38, .55].map((h, i) => `<div class="bar" data-h="${h}" style="position:absolute;bottom:520px;left:${150 + i * 165}px;width:120px;height:${h * 640}px;border-radius:18px 18px 6px 6px;background:${h === 1 ? 'var(--acc)' : '#2a2a36'};transform-origin:50% 100%"></div>`).join('')}
+  <div class="abs" id="best" style="left:345px;top:640px;width:390px;text-align:center"><span class="pill" style="border-color:var(--acc);color:var(--acc)">الأكثر مبيعاً</span></div>
+`, (lt, q, qa) => {
+  const k = p(lt, 0, .3, ob); show(q('#t5'), clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  qa('.bar').forEach((b, i) => { const k = p(lt, .05 + i * .06, .45, ob); b.style.transform = `scaleY(${Math.max(0, k)})`; });
+  show(q('#best'), p(lt, .55, .25), 0, (1 - p(lt, .55, .25)) * 30);
+});
+
+// ---------- 6. مين يشتري ----------
+scene(9.30, 10.20, 'cut', 'cut', `
+  <div class="abs center h1" id="t6" style="top:330px">مين <span class="acc">يشتري؟</span></div>
+  <svg width="1080" height="1920" style="left:0;top:0" id="dots">
+    ${Array.from({ length: 80 }, (_, i) => { const x = 165 + (i % 8) * 107, y = 720 + Math.floor(i / 8) * 85; const d = Math.hypot(x - 600, y - 1050);
+      return `<circle cx="${x}" cy="${y}" r="22" data-d="${d}" fill="#2a2a36"/>`; }).join('')}
+  </svg>
+`, (lt, q, qa) => {
+  const k = p(lt, 0, .3, ob); show(q('#t6'), clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  qa('circle').forEach(c => {
+    const d = +c.dataset.d; c.style.opacity = p(lt, d / 2000, .2);
+    const on = d < 230 && lt > .3 + d / 900; c.setAttribute('fill', on ? '#c8ff3e' : '#2a2a36');
+  });
+});
+
+// ---------- 7. وين يتردد قبل الطلب ----------
+scene(10.20, 11.80, 'cut', 'zoomout', `
+  <div class="abs center h2" id="t7" style="top:330px">وين <span class="acc">يتردد</span><br>قبل الطلب؟</div>
+  <svg width="1080" height="1920" style="left:0;top:0">
+    <path id="road" d="M900 1100 H180" stroke="#2a2a36" stroke-width="12" stroke-linecap="round"/>
+    ${[[900, 'يتصفح'], [540, 'السلة'], [180, 'الطلب']].map(([x, l]) => `<circle cx="${x}" cy="1100" r="46" fill="#15151d" stroke="#2a2a36" stroke-width="8"/>
+      <text x="${x}" y="1220" fill="#8d8a99" font-family="Cairo" font-weight="700" font-size="44" text-anchor="middle">${l}</text>`).join('')}
+    <circle id="ring" cx="540" cy="1100" r="70" fill="none" stroke="#c8ff3e" stroke-width="6" stroke-dasharray="14 14"/>
+    <circle id="me" cx="900" cy="1100" r="28" fill="#c8ff3e"/>
+    <text id="qm" x="540" y="990" fill="#c8ff3e" font-family="Cairo" font-weight="900" font-size="110" text-anchor="middle">؟</text>
+  </svg>
+`, (lt, q) => {
+  reveal([q('#t7')], lt, 0);
+  const x = lerp(900, 540, p(lt, .25, .6, io)); q('#me').setAttribute('cx', x);
+  const h = p(lt, .85, .3); q('#ring').style.opacity = h; q('#ring').style.transform = `rotate(${lt * 60}deg)`; q('#ring').style.transformOrigin = '540px 1100px';
+  q('#qm').style.opacity = h; q('#qm').setAttribute('y', 990 - Math.sin(lt * 8) * 10 * h);
+});
+
+// ---------- 8–13. منظومة النمو ----------
+const NODES = [['استراتيجية', 'compass', 13.45], ['فكرة إبداعية', 'bulb', 14.43], ['محتوى سوشيال وموشن', 'play', 15.95],
+  ['حملات وإعادة استهداف', 'target', 18.07], ['تحسين تجربة الشراء', 'cart', 19.90]];
+scene(11.80, 21.60, 'zoomout', 'whip', `
+  <div class="abs center h3" id="t8a" style="top:300px;color:var(--dim)">بعدها نبني</div>
+  <div class="abs center h1" id="t8" style="top:370px">منظومة <span class="acc">النمو</span></div>
+  <svg width="1080" height="1920" style="left:0;top:0" id="sys">
+    ${NODES.map((n, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / 5, x = 540 + Math.cos(a) * 330, y = 1050 + Math.sin(a) * 330;
+      return `<line class="ln" x1="540" y1="1050" x2="${x}" y2="${y}" stroke="#2a2a36" stroke-width="6"/>`; }).join('')}
+    <circle id="core" cx="540" cy="1050" r="120" fill="#c8ff3e"/>
+    <text x="540" y="1072" fill="#0a0a0f" font-family="Cairo" font-weight="900" font-size="64" text-anchor="middle" id="coret">النمو</text>
+    ${NODES.map((n, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / 5, x = 540 + Math.cos(a) * 330, y = 1050 + Math.sin(a) * 330;
+      return `<g transform="translate(${x} ${y})"><g class="nd" style="color:#8d8a99"><circle r="92" fill="#15151d" stroke="currentColor" stroke-width="6"/>${icon[n[1]]}</g></g>`; }).join('')}
+  </svg>
+  <div class="abs center" style="top:1470px;height:140px" id="caps">
+    ${NODES.map(n => `<div class="abs center h2 cap" style="top:0">${n[0]}</div>`).join('')}
+  </div>
+`, (lt, q, qa) => {
+  const T = 11.80 + lt;
+  show(q('#t8a'), p(lt, 0, .3), 0, (1 - p(lt, 0, .3)) * 30);
+  const k = p(lt, .2, .4, ob); show(q('#t8'), clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  const ck = p(lt, .1, .45, ob); q('#core').setAttribute('r', 120 * Math.max(0, ck)); q('#coret').style.opacity = p(lt, .35, .2);
+  qa('.ln').forEach((l, i) => { const L = 330; l.style.strokeDasharray = L; l.style.strokeDashoffset = L * (1 - p(lt, .45 + i * .15, .4, io)); });
+  const sys = q('#sys');
+  // زوم بطيء على المنظومة طول اللقطة
+  sys.style.transformOrigin = '540px 1050px'; sys.style.transform = `scale(${lerp(.92, 1.04, io(lt / 9.8))})`;
+  qa('.nd').forEach((g, i) => {
+    const appear = p(lt, .6 + i * .15, .35, ob);
+    const on = T >= NODES[i][2], cur = on && (i === NODES.length - 1 || T < NODES[i + 1][2]);
+    const pop = on ? ob((T - NODES[i][2]) / .35) : 0;
+    g.style.color = on ? '#c8ff3e' : '#8d8a99';
+    g.style.opacity = clamp(appear * 2);
+    g.style.transform = `scale(${Math.max(0, appear) * (cur ? lerp(1, 1.18, pop) : 1)})`;
+    qa('.ln')[i].setAttribute('stroke', on ? '#c8ff3e' : '#2a2a36');
+  });
+  // العنوان يختفي لما تبدي الخدمات، والتعليق تحت يتبدل
+  const off = p(T, 13.45, .3); q('#t8').style.opacity = Math.min(+q('#t8').style.opacity, 1 - off * .75); q('#t8a').style.opacity = Math.min(+q('#t8a').style.opacity, 1 - off);
+  qa('.cap').forEach((c, i) => {
+    const a = NODES[i][2], b = i < NODES.length - 1 ? NODES[i + 1][2] : 99;
+    const kin = p(T, a, .35, ob), kout = p(T, b - .05, .2);
+    c.style.opacity = T < a ? 0 : clamp(kin * 2) * (1 - kout);
+    c.style.transform = `translateY(${(1 - kin) * 60 - kout * 40}px)`;
+    if (i === NODES.length - 1 && T > 20.9) c.innerHTML = 'وتحسين <span class="acc">تجربة الشراء</span>';
+  });
+});
+
+// ---------- 14. ما نطلق حملة وننتظر ----------
+scene(21.60, 23.13, 'whip', 'wipe', `
+  <div class="abs center h1" id="t14" style="top:330px">ما نطلق حملة</div>
+  <div class="abs center h1" id="wait" style="top:500px;color:var(--dim)">وننتظر<div class="strike" id="st14" style="top:95px;left:260px;width:560px"></div></div>
+  <div class="abs" id="btn" style="left:290px;top:900px;width:500px;height:150px;border-radius:80px;background:var(--acc);color:#0a0a0f;font:900 64px/150px Cairo;text-align:center">إطلاق</div>
+  <svg width="140" height="140" viewBox="-70 -70 140 140" style="left:470px;top:1180px;color:#8d8a99" id="hg">${icon.hourglass}</svg>
+`, (lt, q) => {
+  const k = p(lt, 0, .3, ob); show(q('#t14'), clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  const press = lt > .35 && lt < .55 ? .92 : 1; show(q('#btn'), p(lt, .1, .25), 0, 0, press * p(lt, .1, .3, ob));
+  show(q('#wait'), p(lt, .6, .3), 0, (1 - p(lt, .6, .3)) * 30);
+  q('#hg').style.opacity = p(lt, .55, .3) * (1 - p(lt, 1.15, .2) * .7); q('#hg').style.transform = `rotate(${io((lt - .7) / .4) * 180}deg)`;
+  const s = p(lt, 1.0, .25, io); q('#st14').style.transform = `scaleX(${s})`; q('#st14').style.opacity = s > 0 ? 1 : 0;
+});
+
+// ---------- 15–16. نختبر ونقرأ النتائج ----------
+scene(23.13, 26.15, 'wipe', 'zoom', `
+  <div class="abs center h1" id="t15" style="top:300px">نختبر <span class="acc">الرسائل</span><br>والزوايا</div>
+  <div class="abs center h1" id="t16" style="top:300px">نقرأ <span class="acc">النتائج</span></div>
+  ${['أ', 'ب'].map((l, i) => `<div class="card ab" style="top:720px;left:${i ? 110 : 570}px;width:400px;height:560px;padding:34px;overflow:hidden">
+     <div class="h2" style="font-size:64px;color:${i ? 'var(--acc)' : 'var(--ink)'}">نسخة ${l}</div>
+     <div style="height:150px;border-radius:16px;background:#22222d;margin-top:20px"></div>
+     <div style="height:18px;width:${i ? 70 : 85}%;background:#2c2c38;border-radius:9px;margin-top:28px"></div>
+     <div style="height:18px;width:${i ? 50 : 60}%;background:#2c2c38;border-radius:9px;margin-top:16px"></div>
+     <div class="scan" style="position:absolute;left:0;right:0;height:6px;background:var(--acc);opacity:.8;box-shadow:0 0 30px var(--acc)"></div></div>
+     <div class="res" data-v="${i ? 1 : .48}" style="position:absolute;top:1330px;left:${i ? 110 : 570}px;width:400px;height:40px;border-radius:20px;background:#22222d;overflow:hidden">
+       <div class="fill" style="height:100%;border-radius:20px;background:${i ? 'var(--acc)' : '#5a5868'};transform-origin:100% 50%"></div></div>`).join('')}
+  <div class="abs" id="win" style="left:250px;top:1400px;width:120px;height:120px;border-radius:50%;background:var(--acc);color:#0a0a0f;font:900 80px/120px Cairo;text-align:center">✓</div>
+`, (lt, q, qa) => {
+  const T = 23.13 + lt, two = T >= 24.67;
+  const k = p(lt, 0, .35, ob); show(q('#t15'), two ? 1 - p(T, 24.67, .15) : clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  const k2 = p(T, 24.72, .35, ob); show(q('#t16'), two ? clamp(k2 * 2) : 0, 0, 0, lerp(.85, 1, k2));
+  qa('.ab').forEach((c, i) => { const k = p(lt, .15 + i * .12, .4, ob); show(c, clamp(k * 2), 0, (1 - k) * 120);
+    c.querySelector('.scan').style.top = `${((lt * 1.3 + i * .5) % 1) * 560}px`; c.querySelector('.scan').style.opacity = two ? 0 : .8;
+    c.style.borderColor = two && i && T > 25.4 ? 'var(--acc)' : 'var(--line)'; });
+  qa('.res').forEach((r, i) => { r.style.opacity = p(T, 24.7, .2); r.querySelector('.fill').style.transform = `scaleX(${+r.dataset.v * p(T, 24.8 + i * .1, .6, io)})`; });
+  const w = p(T, 25.4, .35, ob); show(q('#win'), clamp(w * 2), 0, 0, Math.max(0, w));
+});
+
+// ---------- 17. الأرقام تقرر ----------
+scene(26.15, 29.44, 'zoom', 'whip', `
+  <div class="abs center h1" id="t17" style="top:300px">ونطوّر الشغل</div>
+  <div class="abs center h2" id="t17b" style="top:300px">على اللي تثبته<br><span class="acc" style="font-size:150px">الأرقام</span></div>
+  <svg width="1080" height="1920" style="left:0;top:0">
+    <path d="M120 1500 H960 M120 1500 V820" stroke="#2a2a36" stroke-width="6"/>
+    <path id="curve" d="M140 1440 L330 1400 L380 1290 L560 1250 L610 1110 L790 1060 L840 900 L940 860" fill="none" stroke="#c8ff3e" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/>
+    ${[[380, 1290, '١'], [610, 1110, '٢'], [840, 900, '٣']].map(([x, y, l]) => `<g transform="translate(${x} ${y})"><g class="pt"><circle r="34" fill="#0a0a0f" stroke="#c8ff3e" stroke-width="8"/><text y="16" fill="#c8ff3e" font-family="Cairo" font-weight="900" font-size="44" text-anchor="middle">${l}</text></g></g>`).join('')}
+  </svg>
+`, (lt, q, qa) => {
+  const T = 26.15 + lt;
+  const k = p(lt, 0, .35, ob); show(q('#t17'), clamp(k * 2) * (1 - p(T, 27.6, .2)), 0, 0, lerp(.85, 1, k));
+  const k2 = p(T, 27.7, .4, ob); show(q('#t17b'), clamp(k2 * 2), 0, (1 - k2) * 40);
+  const c = q('#curve'), L = 1200; c.style.strokeDasharray = L; c.style.strokeDashoffset = L * (1 - p(lt, .3, 2.6, x => clamp(x)));
+  qa('.pt').forEach((g, i) => { const k = p(lt, .9 + i * .8, .3, ob); g.style.opacity = clamp(k * 2); g.style.transform = `scale(${Math.max(0, k)})`; });
+});
+
+// ---------- 18. منتج قوي ومبيعات فعلية ----------
+scene(29.44, 32.10, 'whip', 'cut', `
+  <div class="abs center h1" id="t18" style="top:330px">إذا عندك</div>
+  ${['منتج قوي', 'مبيعات فعلية'].map((l, i) => `<div class="card chk" style="top:${760 + i * 260}px;left:120px;width:840px;height:200px;display:flex;align-items:center;gap:40px;padding:0 50px">
+     <div class="box" style="width:110px;height:110px;border-radius:30px;border:6px solid var(--line);color:#0a0a0f;font:900 76px/98px Cairo;text-align:center"></div>
+     <div class="h2" style="font-size:80px">${l}</div></div>`).join('')}
+`, (lt, q, qa) => {
+  const k = p(lt, 0, .35, ob); show(q('#t18'), clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  qa('.chk').forEach((c, i) => {
+    const k = p(lt, .25 + i * .7, .35, ob); show(c, clamp(k * 2), (1 - k) * -160, 0);
+    const on = lt > .75 + i * .85, b = c.querySelector('.box');
+    b.textContent = on ? '✓' : ''; b.style.background = on ? 'var(--acc)' : 'transparent'; b.style.borderColor = on ? 'var(--acc)' : 'var(--line)';
+    c.style.borderColor = on ? 'rgba(200,255,62,.5)' : 'var(--line)';
+  });
+});
+
+// ---------- 19. عبّي النموذج ----------
+scene(32.10, 33.90, 'cut', 'wipe', `
+  <div class="abs center h1" id="t19" style="top:300px">عبّي النموذج<br><span class="acc">الآن</span></div>
+  <div class="card" id="form" style="left:150px;top:760px;width:780px;height:720px;padding:50px">
+    ${['الاسم', 'رابط المتجر', 'المبيعات الشهرية'].map(l => `<div class="small" style="font-size:34px">${l}</div>
+      <div class="fld" style="height:90px;border-radius:18px;border:3px solid var(--line);margin:12px 0 30px;padding:0 28px;display:flex;align-items:center"><div class="typed" style="height:18px;border-radius:9px;background:var(--ink);opacity:.8"></div></div>`).join('')}
+    <div id="send" style="height:110px;border-radius:60px;background:var(--acc);color:#0a0a0f;font:900 54px/110px Cairo;text-align:center">أرسل</div>
+  </div>
+`, (lt, q, qa) => {
+  const k = p(lt, 0, .35, ob); show(q('#t19'), clamp(k * 2), 0, 0, lerp(.85, 1, k));
+  const f = p(lt, .15, .4, ob); show(q('#form'), clamp(f * 2), 0, (1 - f) * 120);
+  qa('.typed').forEach((t, i) => { const x = p(lt, .45 + i * .3, .3, io); t.style.width = `${[45, 70, 35][i] * x}%`; qa('.fld')[i].style.borderColor = x > 0 && x < 1 ? 'var(--acc)' : 'var(--line)'; });
+  q('#send').style.transform = `scale(${lt > 1.4 && lt < 1.55 ? .93 : 1})`;
+});
+
+// ---------- 20. شريك نمو ----------
+scene(33.90, 36.60, 'wipe', 'cut', `
+  <div class="abs center h3" id="t20a" style="top:640px;color:var(--dim)">${BRAND ? `وخلّ <span class="acc">${BRAND}</span> تكون` : 'خلّنا نكون'}</div>
+  <div class="abs center h1" id="t20" style="top:730px;font-size:190px;line-height:1.1">شريك<br><span class="acc">نمو</span></div>
+  <div class="strike" id="ul" style="top:1170px;left:330px;width:420px;height:16px"></div>
+  <div class="abs center" id="cta" style="top:1300px"><span style="display:inline-block;padding:30px 70px;border-radius:80px;background:var(--acc);color:#0a0a0f;font:900 58px Cairo">عبّي النموذج الآن</span></div>
+`, (lt, q) => {
+  show(q('#t20a'), p(lt, .05, .3), 0, (1 - p(lt, .05, .3)) * 30);
+  const k = p(lt, .15, .5, ob); show(q('#t20'), clamp(k * 2), 0, 0, lerp(.8, 1, k) * lerp(1, 1.04, clamp(lt / 2.7)));
+  const u = p(lt, .6, .4, io); q('#ul').style.transform = `scaleX(${u})`; q('#ul').style.opacity = u > 0 ? 1 : 0;
+  const c = p(lt, .9, .4, ob); show(q('#cta'), clamp(c * 2), 0, (1 - c) * 60, Math.max(0, lerp(.8, 1, c)));
+});
+
+// ---------- الانتقالات ----------
+const D_IN = .32, D_OUT = .16;
+// المحتوى يبدأ قبل الانتقال بشوية، حتى اللقطة تدخل وبيها نص وما تبين فاضية
+const LEAD = .25;
+function tIn(type, x) { // x من 0 إلى 1
+  const e = oc(x);
+  switch (type) {
+    case 'zoom': return { o: clamp(x * 3), s: lerp(1.5, 1, e), tx: 0, ty: 0, b: (1 - e) * 14 };
+    case 'zoomout': return { o: clamp(x * 3), s: lerp(.7, 1, e), tx: 0, ty: 0, b: (1 - e) * 10 };
+    case 'whip': return { o: 1, s: 1, tx: (1 - e) * -1080, ty: 0, b: (1 - e) * 30 };
+    case 'up': return { o: 1, s: 1, tx: 0, ty: (1 - e) * 1920, b: (1 - e) * 30 };
+    default: return { o: 1, s: 1, tx: 0, ty: 0, b: 0 };
+  }
+}
+function tOut(type, x) {
+  const e = x * x * x;
+  switch (type) {
+    case 'zoom': return { o: 1 - e, s: lerp(1, 1.6, e), tx: 0, ty: 0, b: e * 14 };
+    case 'zoomout': return { o: 1 - e, s: lerp(1, 2.2, e), tx: 0, ty: 0, b: e * 10 };
+    case 'whip': return { o: 1, s: 1, tx: e * 1080, ty: 0, b: e * 30 };
+    case 'up': return { o: 1, s: 1, tx: 0, ty: e * -1920, b: e * 30 };
+    default: return { o: 1, s: 1, tx: 0, ty: 0, b: 0 };
+  }
+}
+const wipe = document.getElementById('wipe');
+window.setT = t => {
+  for (const sc of S) {
+    const vis = t >= sc.a && t < sc.b;
+    sc.el.style.display = vis ? 'block' : 'none';
+    if (!vis) continue;
+    const lt = t - sc.a;
+    sc.update(sc.a === 0 ? lt : lt + LEAD);
+    let r = { o: 1, s: 1, tx: 0, ty: 0, b: 0 };
+    if (lt < D_IN) r = tIn(sc.tin, lt / D_IN);
+    else if (sc.b - t < D_OUT) r = tOut(sc.tout, 1 - (sc.b - t) / D_OUT);
+    sc.el.style.opacity = r.o;
+    sc.el.style.transform = `translate(${r.tx}px,${r.ty}px) scale(${r.s})`;
+    sc.el.style.filter = r.b > .3 ? `blur(${r.b}px)` : 'none';
+  }
+  // مسح باللوحة الخضراء عند حدود 'wipe'
+  let w = null;
+  for (const sc of S) if (sc.tin === 'wipe' && Math.abs(t - sc.a) < .2) w = (t - sc.a + .2) / .4;
+  wipe.style.display = w === null ? 'none' : 'block';
+  if (w !== null) wipe.style.transform = `translateX(${lerp(1100, -1460, io(w))}px) skewX(-12deg)`;
+  document.getElementById('grid').style.transform = `translate(${(t * 18) % 120}px, ${(t * 10) % 120}px)`;
+  document.getElementById('fade').style.opacity = clamp((t - 36.1) / .5);
+};
+setT(0);
+</script>
+</body>
+</html>
