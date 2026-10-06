@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+@font-face{font-family:M;src:url(/tmp/claude-0/site/wajha-studio/fonts/el-messiri/files/el-messiri-arabic-wght-normal.woff2);font-weight:400 700}
+@font-face{font-family:P;src:url(/tmp/claude-0/site/wajha-studio/fonts/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2);font-weight:600}
+@font-face{font-family:P;src:url(/tmp/claude-0/site/wajha-studio/fonts/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-600-normal.woff2);font-weight:600;unicode-range:U+0000-00FF}
+:root{--bg:#1c070c;--wine:#3a1220;--gold:#d8b266;--gold2:#f6e3b0;--ink:#f4e9d6}
+*{margin:0;box-sizing:border-box}html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+.f{position:absolute;inset:0;display:none;overflow:hidden;
+ background:radial-gradient(1100px 1100px at 50% 42%,#5a1a2b 0%,#2a0b13 48%,#12040a 100%)}
+.grain{position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>")}
+.vig{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,transparent 45%,rgba(0,0,0,.65) 100%)}
+.gold{background:linear-gradient(100deg,#a8803a 0%,#f6e3b0 38%,#d8b266 55%,#fff4d6 62%,#b98f45 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.t{position:absolute;left:80px;right:80px;text-align:center;font-family:M;font-weight:700;color:var(--ink)}
+.arch{position:absolute;border:4px solid var(--gold);border-radius:999px 999px 0 0;box-shadow:0 0 120px rgba(216,178,102,.25),inset 0 0 80px rgba(216,178,102,.08)}
+.dust{position:absolute;border-radius:50%;background:var(--gold2);box-shadow:0 0 12px var(--gold)}
+.phone{position:absolute;width:420px;height:861px;border-radius:56px;padding:12px;background:linear-gradient(145deg,#2b1016,#0a0204);
+ box-shadow:0 0 0 2px rgba(216,178,102,.6),0 80px 120px rgba(0,0,0,.6)}
+.phone img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:46px;display:block}
+.pill{display:inline-block;font:600 38px P;color:var(--gold);border:2px solid rgba(216,178,102,.5);border-radius:60px;padding:6px 30px}
+.line{position:absolute;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+</style></head><body>
+<!-- 1: الهوك -->
+<div class="f" id="f1">
+ <div class="arch" style="left:190px;top:420px;width:700px;height:1000px"></div>
+ <div class="arch" style="left:230px;top:460px;width:620px;height:960px;border-width:2px;opacity:.5"></div>
+ <div class="t" style="top:640px;font-size:150px;line-height:1.15">محلّك <span class="gold">زين</span></div>
+ <div class="t" style="top:900px;font-size:96px;color:#d3c0a6;font-weight:500">بس… منو يدري؟</div>
+ <div class="line" style="left:300px;width:480px;top:1110px"></div>
+ <div id="d1"></div>
+</div>
+<!-- 2: الخدمات -->
+<div class="f" id="f2">
+ <div class="t" style="top:230px"><span class="pill">منيو رقمي لمطعمك</span></div>
+ <div class="t" style="top:320px;font-size:104px;line-height:1.2">يفتح من <span class="gold">QR</span><br>على الطاولة</div>
+ <div class="arch" style="left:90px;top:640px;width:900px;height:1300px;border-width:3px;opacity:.7"></div>
+ <div class="phone" style="left:40px;top:870px;transform:perspective(1800px) rotateY(-24deg) rotateZ(-3deg) scale(.86);opacity:.9"><img src="layali-2.png"></div>
+ <div class="phone" style="right:40px;top:870px;transform:perspective(1800px) rotateY(24deg) rotateZ(3deg) scale(.86);opacity:.9"><img src="4u-1.png"></div>
+ <div class="phone" style="left:330px;top:780px;z-index:2"><img src="layali-1.png"></div>
+ <div id="d2"></div>
+</div>
+<!-- 3: الخاتمة -->
+<div class="f" id="f3">
+ <div class="arch" style="left:375px;top:420px;width:330px;height:430px;border-width:5px;display:flex;align-items:center;justify-content:center;padding-bottom:20px">
+   <span class="gold" style="font:700 230px M">و</span></div>
+ <div class="t" style="top:900px;font-size:120px"><span class="gold">واجهة</span></div>
+ <div class="t" style="top:1060px;font:600 44px P;color:#d3c0a6;letter-spacing:0">Wajha Studio</div>
+ <div class="t" style="top:1170px;font-size:80px">تليق <span class="gold">بمحلّك</span></div>
+ <div class="t" style="top:1360px"><span style="display:inline-block;background:linear-gradient(100deg,#b98f45,#f6e3b0 50%,#d8b266);color:#2a0b13;font:700 52px M;padding:26px 70px;border-radius:80px;box-shadow:0 20px 60px rgba(216,178,102,.3)">راسلني على واتساب</span></div>
+ <div class="t" style="top:1510px;font:600 50px P;direction:ltr">+964 774 780 0611</div>
+ <div id="d3"></div>
+</div>
+<script>
+for (const id of ['d1','d2','d3']) { const h=document.getElementById(id); let s='';
+ for (let i=0;i<70;i++){const r=Math.random()*5+1.5;s+=`<div class="dust" style="left:${Math.random()*1080}px;top:${Math.random()*1920}px;width:${r}px;height:${r}px;opacity:${Math.random()*.7+.1}"></div>`}
+ h.innerHTML=s; }
+document.querySelectorAll('.f').forEach(f=>{f.insertAdjacentHTML('beforeend','<div class="vig"></div><div class="grain"></div>')});
+const n=new URLSearchParams(location.search).get('f')||'1'; document.getElementById('f'+n).style.display='block';
+</script></body></html>
