@@ -1,6 +1,6 @@
 """موسيقى ريل «منيوك بعده ورق؟» بالكود فقط (بلا مقاطع جاهزة)، على 100 ضربة بالدقيقة.
-- قبل التحويل (0–6.0): نبض منخفض متوتر وساعة تتكتك، وصعود (riser) يوصل للتحويل.
-- عند 6.0: ضربة (impact) ثم إيقاع دافي: كيك، تصفيق، هاي هات، وتر متقطع، ووسادة أوتار.
+- قبل التحويل (0–6.84): نبض منخفض متوتر وساعة تتكتك، وصعود (riser) يوصل للتحويل.
+- عند 6.84 («خلّيه رقمي»): ضربة (impact) ثم إيقاع دافي: كيك، تصفيق، هاي هات، وتر متقطع، ووسادة أوتار.
 - مؤثرات: «ووش» على كل قطع، وصوت ورق بمشاهد الورق، و«دينگ» عند رقم الواتساب.
 python3 audio/music.py out_dir
 """
@@ -9,9 +9,9 @@ from scipy.signal import butter, sosfilt
 
 SR = 48000
 BPM = 100; B = 60 / BPM          # الضربة = 0.6 ثانية
-DUR = 25.2
-SWITCH = 6.0                      # لحظة التحويل من الورق للرقمي
-CUTS = [2.4, 4.2, 7.8, 10.2, 12.0, 13.8, 15.6, 19.2]
+DUR = 27.6
+SWITCH = 6.84                     # لحظة التحويل من الورق للرقمي
+CUTS = [1.99, 4.70, 7.89, 10.94, 12.90, 14.69, 18.15, 20.91]   # من audio/timeline.json
 N = int((DUR + .6) * SR); t = np.arange(N) / SR
 rng = np.random.default_rng(3)
 
@@ -111,12 +111,12 @@ def paper(at, d=.7):   # صوت ورق يتكرمش
     n = int(d * SR); x = bp(rng.standard_normal(n), 1500, 9000)
     bursts = (rng.random(n // 400 + 1) > .55).repeat(400)[:n] * rng.random(n)
     add(sfx, x * lp(bursts, 60) * 3, at, .5)
-paper(.15); paper(2.5); paper(4.3)
+paper(.1); paper(2.05); paper(4.75)
 def ding(at):
     n = int(1.4 * SR); tt = np.arange(n) / SR
     s = sum(np.sin(2*np.pi*f*tt) * np.exp(-tt * dd) for f, dd in ((1318.5, 3), (1975.5, 4.5), (2637, 6)))
     add(sfx, s / 3, at, .35)
-ding(19.3); ding(21.2)
+ding(20.95); ding(22.2)
 
 out = sys.argv[1]
 mx = max(np.abs(music).max(), 1e-9); music /= mx

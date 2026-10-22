@@ -3,7 +3,7 @@
 // node render.cjs test 0.5 3 ...  -> إطارات تجربة بأوقات محددة إلى test/
 const path = require('path'), fs = require('fs');
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
-const DUR = 25.2, FPS = 30;
+const DUR = 27.6, FPS = 30;
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
   const pg = await (await b.newContext({ viewport: { width: 1080, height: 1920 } })).newPage();
