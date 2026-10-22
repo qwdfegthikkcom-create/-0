@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: M; src: url(fonts/el-messiri-arabic-wght-normal.woff2) format("woff2"); font-weight: 400 700; }
+@font-face { font-family: M; src: url(fonts/el-messiri-latin-wght-normal.woff2) format("woff2"); font-weight: 400 700; unicode-range: U+0000-00FF, U+2010-2027; }
+@font-face { font-family: P; src: url(fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2) format("woff2"); font-weight: 600; }
+@font-face { font-family: P; src: url(fonts/ibm-plex-sans-arabic-latin-600-normal.woff2) format("woff2"); font-weight: 600; unicode-range: U+0000-00FF, U+2010-2027, U+2726; }
+:root { --wine: #3a1220; --gold: #d8b266; --gold2: #f6e3b0; --ink: #f4e9d6; --muted: #d3c0a6; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: clip; background: #12040a; color: var(--ink); }
+#bg { position: absolute; inset: 0; transform-origin: 50% 45%; background: radial-gradient(1100px 1100px at 50% 45%, #5a1a2b 0%, #2a0b13 48%, #12040a 100%); }
+#dust, .scene, #bgclip { position: absolute; inset: 0; }
+#bgclip { overflow: clip; }
+#stage { position: absolute; inset: 0; overflow: clip; }
+#dust { overflow: clip; }
+.scene { overflow: clip; }
+.scene { display: none; will-change: transform, opacity, filter; }
+.dust { position: absolute; left: 0; top: 0; border-radius: 50%; background: var(--gold2); box-shadow: 0 0 10px var(--gold); }
+#vig { position: absolute; inset: 0; background: radial-gradient(circle at 50% 46%, transparent 48%, rgba(0,0,0,.7) 100%); pointer-events: none; }
+.abs { position: absolute; }
+.t { position: absolute; left: 80px; right: 80px; text-align: center; font-family: M; font-weight: 700; color: var(--ink); }
+.gold { background: linear-gradient(100deg, #a8803a 0%, #f6e3b0 35%, #d8b266 52%, #fff4d6 var(--sh, 60%), #b98f45 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { font-family: P; font-weight: 600; color: var(--muted); }
+.pill { display: inline-block; font: 600 38px P; color: var(--gold); border: 2px solid rgba(216,178,102,.5); border-radius: 60px; padding: 6px 30px; }
+.arch { position: absolute; border: 4px solid var(--gold); border-radius: 999px 999px 0 0; box-shadow: 0 0 120px rgba(216,178,102,.22), inset 0 0 80px rgba(216,178,102,.07); }
+.phone { position: absolute; left: 0; top: 0; width: 420px; height: 861px; border-radius: 56px; padding: 12px; background: linear-gradient(145deg, #2b1016, #0a0204);
+  box-shadow: 0 0 0 2px rgba(216,178,102,.6), 0 80px 120px rgba(0,0,0,.6); }
+.scr { position: relative; width: 100%; height: 100%; border-radius: 46px; overflow: hidden; background: #000; }
+.scr img { position: absolute; top: 0; left: 0; width: 100%; display: block; }
+.w { display: inline-block; }
+.line { position: absolute; height: 3px; background: linear-gradient(90deg, transparent, var(--gold), transparent); transform-origin: 50% 50%; }
+.btn { display: inline-block; background: linear-gradient(100deg, #b98f45, #f6e3b0 50%, #d8b266); color: #2a0b13; font: 700 54px M; padding: 26px 74px; border-radius: 80px; box-shadow: 0 20px 60px rgba(216,178,102,.3); }
+#flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(246,227,176,.3), transparent 55%); opacity: 0; pointer-events: none; }
+.bgw { position: absolute; inset: 0; overflow: clip; }
+.bgw img { position: absolute; left: 0; top: -8px; width: 1080px; height: 1935px; object-fit: cover; will-change: transform; filter: saturate(1.05) contrast(1.04); }
+.shade { position: absolute; inset: 0; }
+.shade.top { background: linear-gradient(180deg, rgba(18,4,10,.92) 0%, rgba(18,4,10,.7) 22%, rgba(18,4,10,.12) 45%, rgba(18,4,10,.1) 70%, rgba(18,4,10,.75) 100%); }
+.shade.dark { background: radial-gradient(900px 1100px at 50% 50%, rgba(18,4,10,.55), rgba(18,4,10,.85)); }
+.t { text-shadow: 0 6px 30px rgba(0,0,0,.55); }
+#fade { position: absolute; inset: 0; background: #000; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="bgclip"><div id="bg"></div></div><div id="dust"></div>
+<div id="stage"></div>
+<div id="vig"></div><div id="flash"></div><div id="fade"></div>
+<script>
+// ===== أدوات =====
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+const oc = x => 1 - Math.pow(1 - clamp(x), 3);
+const io = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const ob = x => { x = clamp(x); const c = 1.5; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const k = (T, a, d = .5, f = oc) => f((T - a) / d);
+const $ = (r, s) => r.querySelector(s), $$ = (r, s) => [...r.querySelectorAll(s)];
+function show(e, o, x = 0, y = 0, s = 1, extra = '') { e.style.opacity = o; e.style.transform = `translate(${x}px,${y}px) scale(${s}) ${extra}`; }
+// نص يطلع كلمة كلمة، مع ضبابية خفيفة
+function words(txt, cls = '') { return txt.split(' ').map(w => `<span class="w ${cls}">${w}</span>`).join(' '); }
+function rise(list, T, at, gap = .08, d = .5) {
+  list.forEach((w, i) => { const p = k(T, at + i * gap, d); show(w, p, 0, (1 - p) * 40); w.style.filter = p < 1 ? `blur(${(1 - p) * 8}px)` : 'none'; });
+}
+function fadeOut(e, T, at, d = .25) { const p = k(T, at, d, x => clamp(x)); e.style.opacity = Math.min(+e.style.opacity || 1, 1 - p); }
+// لمعة ذهبية تمر على النص
+function shine(e, T, at, d = .9) { e.style.setProperty('--sh', `${lerp(-20, 130, clamp((T - at) / d))}%`); }
+function phone(img, w = 420) { return `<div class="phone"><div class="scr"><img src="cap/${img}"></div></div>`; }
+function scroll(ph, y) { $(ph, 'img').style.transform = `translateY(${-y}px)`; }
+// صورة بعرض الشاشة كلها، مع تظليل حتى يبين النص فوقها
+function photo(name, id, shade = 'top') { return `<div class="bgw" id="${id}"><img src="gen/${name}.jpg"><div class="shade ${shade}"></div></div>`; }
+// حركة كاميرا هادئة (تكبير وانزلاق) على الصورة
+function kb(el, T, a, d, z0, z1, y0 = 0, y1 = 0, origin = '50% 50%') { const p = io((T - a) / d), im = $(el, 'img'); im.style.transformOrigin = origin; im.style.transform = `translateY(${lerp(y0, y1, p)}px) scale(${lerp(z0, z1, p)})`; }
+
+const stage = document.getElementById('stage');
+const S = [];
+function scene(a, b, tin, html, update) {
+  const el = document.createElement('div'); el.className = 'scene'; el.innerHTML = html; stage.appendChild(el);
+  S.push({ a, b, tin, el, update });
+}
+
+// الصور في gen/ مولّدة بـ Figma AI بطلب صاحب المشروع (gen/README.md).
+// الأوقات كلها من audio/timeline.json (صوت 2026-10-22). النص على الشاشة هو نفس الكلام المسموع.
+
+// ===== 1. الهوك: محلّك زين… بس منو يدري؟ =====
+scene(0, 3.31, 'cut', `
+  ${photo('street-shop', 'p1', 'dark')}
+  <div class="arch" id="a1" style="left:190px;top:440px;width:700px;height:1000px"></div>
+  <div class="arch" id="a2" style="left:232px;top:482px;width:616px;height:958px;border-width:2px;opacity:.45"></div>
+  <div class="t" id="h1" style="top:660px;font-size:138px;line-height:1.15">${words('محلّك')} <span class="w gold" id="g1">زين…</span></div>
+  <div class="t" id="h2" style="top:930px;font-size:96px;color:var(--ink);font-weight:500">${words('بس… منو يدري؟')}</div>
+  <div class="line" id="ln1" style="left:300px;width:480px;top:1150px"></div>
+`, (T, r) => {
+  kb($(r, '#p1'), T, 0, 3.6, 1.12, 1.0, 0, -20);
+  const a = k(T, 0, 1.0, io); $(r, '#a1').style.clipPath = `inset(${(1 - a) * 100}% 0 0 0)`; $(r, '#a2').style.clipPath = `inset(${(1 - k(T, .15, 1.0, io)) * 100}% 0 0 0)`;
+  rise($$(r, '#h1 .w'), T, .05, .3, .5); shine($(r, '#g1'), T, .55, 1.0);
+  rise($$(r, '#h2 .w'), T, 1.35, .42, .45);
+  $(r, '#ln1').style.transform = `scaleX(${k(T, 2.2, .6, io)})`;
+});
+
+// ===== 2. زبونك اليوم ما يمرّ من الشارع… يمرّ من شاشة موبايله =====
+scene(3.31, 7.71, 'whip', `
+  ${photo('cafe-phone', 'p2', 'top')}
+  <div class="t" id="h3" style="top:250px;font-size:80px;line-height:1.3">${words('زبونك اليوم ما يمرّ')}<br>${words('من الشارع…')}</div>
+  <div class="t" id="h4" style="top:270px;font-size:88px;line-height:1.3">${words('يمرّ من')} <span class="w gold" id="g4">شاشة موبايله</span></div>
+`, (T, r) => {
+  // الكاميرا تقترب من الموبايل اللي بإيده
+  kb($(r, '#p2'), T, 3.31, 4.4, 1.0, 1.18, 0, 0, '62% 62%');
+  rise($$(r, '#h3 .w'), T, 3.33, .22); fadeOut($(r, '#h3'), T, 5.7);
+  rise($$(r, '#h4 .w'), T, 5.98, .2); shine($(r, '#g4'), T, 6.5);
+});
+
+// ===== 3. وأول شي يشوفه منك… لازم يليق بيك =====
+scene(7.71, 11.14, 'zoom', `
+  ${photo('hand-phone', 'p3', 'top')}
+  <div class="t" id="h5" style="top:250px;font-size:84px">${words('وأول شي يشوفه منك…')}</div>
+  <div class="t" id="h6" style="top:370px;font-size:122px"><span class="w">لازم</span> <span class="w gold" id="g6">يليق بيك</span></div>
+`, (T, r) => {
+  kb($(r, '#p3'), T, 7.71, 3.5, 1.04, 1.14, 0, 0, '50% 45%');
+  rise($$(r, '#h5 .w'), T, 7.72, .2);
+  rise($$(r, '#h6 .w'), T, 9.5, .25, .5); shine($(r, '#g6'), T, 9.95);
+});
+
+// ===== 4. أني عبدالله من الموصل، وواجهة شغلتها وحدة =====
+scene(11.14, 17.72, 'flash', `
+  <div class="arch" id="logo" style="left:375px;top:470px;width:330px;height:430px;border-width:5px;display:flex;align-items:center;justify-content:center;padding-bottom:20px">
+    <span class="gold" id="gl" style="font:700 230px M">و</span></div>
+  <div class="t sub" id="who" style="top:960px;font-size:46px">${words('أني عبدالله · من الموصل')}</div>
+  <div class="t" id="nm" style="top:1050px;font-size:130px"><span class="w gold" id="gn">واجهة</span></div>
+  <div class="t sub" id="en" style="top:1230px;font-size:44px;direction:ltr">Wajha Studio</div>
+  <div class="t" id="h9" style="top:1340px;font-size:74px;line-height:1.35">${words('تجعل محلّك يبيّن')}<br><span class="w gold" id="g9">مثل ما يستاهل</span></div>
+`, (T, r) => {
+  const l = k(T, 11.14, .9, ob); show($(r, '#logo'), clamp(l * 2), 0, (1 - l) * 80, lerp(.7, 1, l));
+  $(r, '#logo').style.clipPath = `inset(${(1 - k(T, 11.14, .9, io)) * 100}% 0 0 0)`;
+  shine($(r, '#gl'), T, 11.5, 1.1);
+  rise($$(r, '#who .w'), T, 11.2, .14);
+  rise($$(r, '#nm .w'), T, 13.03, .1, .6); shine($(r, '#gn'), T, 13.5, 1.0);
+  show($(r, '#en'), k(T, 13.5, .5), 0, 0);
+  rise($$(r, '#h9 .w'), T, 14.86, .2); shine($(r, '#g9'), T, 16.2);
+});
+
+// ===== 5. منيو رقمي لمطعمك… يفتح من رمز QR على الطاولة =====
+scene(17.72, 21.57, 'whip', `
+  ${photo('qr-table', 'p5', 'top')}
+  <div class="t" id="h10" style="top:290px;font-size:88px;line-height:1.25">${words('منيو')} <span class="w gold" id="g10">رقمي</span> ${words('لمطعمك…')}</div>
+  <div class="t" id="h11" style="top:250px;font-size:84px;line-height:1.3">${words('يفتح من رمز')} <span class="w" style="direction:ltr;font-family:P">QR</span><br>${words('على')} <span class="w gold" id="g11">الطاولة</span></div>
+  <div id="qr" style="position:absolute;left:96px;top:1180px;width:210px;height:210px;padding:22px;border-radius:26px;background:#f6ecd8;box-shadow:0 20px 60px rgba(0,0,0,.6);z-index:3">
+    <img src="cap/qr-dijla.svg" style="width:100%;height:100%;display:block"></div>
+  <div class="abs sub" id="cap5" style="left:96px;top:1410px;width:300px;font:600 30px/1.4 P;color:var(--ink);z-index:4">امسح وجرّب<br><span style="color:var(--gold)">منيو تجريبي</span></div>
+`, (T, r) => {
+  kb($(r, '#p5'), T, 17.72, 4.2, 1.12, 1.0, 30, -10, '60% 50%');
+  rise($$(r, '#h10 .w'), T, 17.74, .22); shine($(r, '#g10'), T, 18.3); fadeOut($(r, '#h10'), T, 18.95);
+  rise($$(r, '#h11 .w'), T, 19.25, .16);
+  shine($(r, '#g11'), T, 20.4);
+  const qr = k(T, 19.5, .6, ob); show($(r, '#qr'), clamp(qr * 2), 0, (1 - qr) * 60, Math.max(0, qr), `rotate(${lerp(-10, -3, qr)}deg)`);
+  show($(r, '#cap5'), k(T, 19.9, .5), 0, 0);
+});
+
+// ===== 6. موقع لعيادتك، لمحلّك، لمكتبك الهندسي =====
+scene(21.57, 25.07, 'whip', `
+  ${photo('clinic', 'p6a', 'top')}${photo('boutique', 'p6b', 'top')}${photo('eng-office', 'p6c', 'top')}
+  <div class="t" id="h12" style="top:240px;font-size:100px">${words('موقع')}</div>
+  <div class="abs" style="left:80px;right:80px;top:390px;height:150px">
+    ${['لعيادتك', 'لمحلّك', 'لمكتبك الهندسي'].map(w => `<div class="t gold lw" style="left:0;right:0;top:0;font-size:92px">${w}</div>`).join('')}
+  </div>
+`, (T, r) => {
+  rise($$(r, '#h12 .w'), T, 21.58);
+  const at = [22.0, 22.86, 23.7];
+  $$(r, '.lw').forEach((w, i) => {
+    const p = k(T, at[i], .35, ob), o = i < 2 ? k(T, at[i + 1] - .1, .2, x => clamp(x)) : 0;
+    show(w, clamp(p * 2) * (1 - o), 0, (1 - p) * 60 - o * 50); shine(w, T, at[i] + .2, .7);
+  });
+  // كل صورة تطلع ويه كلمتها: عيادة، محل، مكتب هندسي
+  ['#p6a', '#p6b', '#p6c'].forEach((id, i) => {
+    const e = $(r, id), t0 = i ? at[i] - .12 : 21.57;
+    e.style.opacity = i ? k(T, t0, .25, x => clamp(x)) : 1;
+    kb(e, T, t0, 1.6, 1.1, 1.0, i % 2 ? -25 : 25, 0);
+  });
+});
+
+// ===== 7. وفيديو ترويجي لحساباتك… مثل هذا اللي تشوفه هسه =====
+scene(25.07, 28.52, 'zoom', `
+  ${photo('creator', 'p7', 'top')}
+  <div class="t" id="h13" style="top:240px;font-size:92px;line-height:1.3">${words('وفيديو')} <span class="w gold">ترويجي</span><br>${words('لحساباتك…')}</div>
+  <div class="t" id="h14" style="top:240px;font-size:96px;line-height:1.3">${words('مثل هذا')}<br><span class="w gold" id="g14">اللي تشوفه هسه</span></div>
+  <div class="abs" id="rec" style="left:80px;top:1560px;display:flex;align-items:center;gap:16px;font:600 34px P;color:#fff;direction:ltr">
+    <span style="width:22px;height:22px;border-radius:50%;background:#e5484d;box-shadow:0 0 18px #e5484d"></span><span id="tc">00:25</span></div>
+`, (T, r) => {
+  kb($(r, '#p7'), T, 25.07, 3.6, 1.0, 1.12, 0, 0, '55% 70%');
+  rise($$(r, '#h13 .w'), T, 25.08, .18); fadeOut($(r, '#h13'), T, 26.7);
+  rise($$(r, '#h14 .w'), T, 26.94, .16); shine($(r, '#g14'), T, 27.5);
+  const rc = $(r, '#rec'); rc.style.opacity = k(T, 25.3, .3) * (Math.floor(T * 2) % 2 ? 1 : .55);
+  $(r, '#tc').textContent = '00:' + String(Math.floor(T)).padStart(2, '0');
+});
+
+// ===== 8. مو قالب ينطي للكل… ألوانك، شعارك، هويتك إنت =====
+scene(28.52, 33.03, 'whip', `
+  ${photo('brand-kit', 'p8', 'top')}
+  <div class="t" id="h15" style="top:240px;font-size:92px;line-height:1.3">${words('مو قالب')}<br>${words('ينطي للكل…')}</div>
+  <div class="abs" id="ids" style="left:60px;right:60px;top:300px;display:flex;justify-content:center;gap:28px">
+    ${['ألوانك', 'شعارك', 'هويتك إنت'].map(w => `<div class="t gold iw" style="position:relative;left:0;right:0;font-size:62px;white-space:nowrap">${w}</div>`).join('')}
+  </div>
+`, (T, r) => {
+  // الكاميرا تنزل ببطء على أدوات الهوية: الألوان، الختم، البطاقات
+  kb($(r, '#p8'), T, 28.52, 4.6, 1.16, 1.02, 0, -60, '50% 40%');
+  rise($$(r, '#h15 .w'), T, 28.54, .2); fadeOut($(r, '#h15'), T, 29.95);
+  const at = [30.17, 30.96, 31.77];
+  $$(r, '.iw').forEach((w, i) => { const p = k(T, at[i], .4, ob); show(w, clamp(p * 2), 0, (1 - p) * 50, lerp(.8, 1, p)); shine(w, T, at[i] + .2, .7); });
+});
+
+// ===== 9. للموبايل أولاً، بالعربي من الأساس، بلا تطبيق ولا تسجيل =====
+scene(33.03, 37.79, 'up', `
+  <div class="arch" style="left:140px;top:380px;width:800px;height:1300px;border-width:3px;opacity:.5"></div>
+  ${[['للموبايل', 'أولاً', 33.03], ['بالعربي', 'من الأساس', 34.33], ['بلا تطبيق', 'ولا تسجيل', 35.69]].map(([a, b, t], i) => `
+    <div class="t fr" data-t="${t}" style="top:${560 + i * 330}px;font-size:86px;line-height:1.15">${a} <span class="gold">${b}</span></div>
+    <div class="line fl" data-t="${t}" style="left:340px;width:400px;top:${745 + i * 330}px"></div>`).join('')}
+`, (T, r) => {
+  $$(r, '.fr').forEach(e => { const p = k(T, +e.dataset.t, .5, ob); show(e, clamp(p * 2), 0, (1 - p) * 60, lerp(.85, 1, p)); e.style.filter = p < 1 ? `blur(${(1 - p) * 10}px)` : 'none'; shine($(e, '.gold'), T, +e.dataset.t + .25, .7); });
+  $$(r, '.fl').forEach(e => { e.style.transform = `scaleX(${k(T, +e.dataset.t + .3, .5, io)})`; });
+});
+
+// ===== 10. تدزلي المحتوى… أني أبني… إنت تراجع… وتستلم الرابط جاهز =====
+scene(37.79, 42.64, 'whip', `
+  <div class="t" style="top:240px;font-size:84px">طريقة <span class="gold">الشغل</span></div>
+  ${[['١', 'تدزلي المحتوى', 37.79], ['٢', 'أني أبني', 39.04], ['٣', 'إنت تراجع', 39.99], ['٤', 'تستلم الرابط جاهز', 40.92]].map(([n, l, t], i) => `
+    <div class="abs st" data-t="${t}" style="left:110px;right:110px;top:${480 + i * 270}px;height:220px;display:flex;align-items:center;gap:40px;padding:0 46px;border:2px solid rgba(216,178,102,.35);border-radius:110px 110px 28px 28px;background:rgba(58,18,32,.55)">
+      <div class="num" style="flex:none;width:120px;height:120px;border-radius:60px 60px 14px 14px;border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 72px M;color:var(--gold)">${n}</div>
+      <div style="font:700 72px M;white-space:nowrap">${l}</div></div>`).join('')}
+`, (T, r) => {
+  $$(r, '.st').forEach(e => {
+    const t = +e.dataset.t, p = k(T, t - .15, .45, ob); show(e, clamp(p * 2) * (T > t ? 1 : .35), (1 - p) * -300, 0);
+    const on = T >= t; const n = $(e, '.num');
+    n.style.background = on ? 'linear-gradient(140deg,#b98f45,#f6e3b0,#d8b266)' : 'transparent'; n.style.color = on ? '#2a0b13' : 'var(--gold)';
+    e.style.borderColor = on ? 'rgba(216,178,102,.8)' : 'rgba(216,178,102,.3)';
+  });
+});
+
+// ===== 11. واجهتك الرقمية تبدي برسالة. راسلني على واتساب =====
+scene(42.64, 46.54, 'zoom', `
+  <div class="t" id="h24" style="top:470px;font-size:100px;line-height:1.25">${words('واجهتك الرقمية')}<br>${words('تبدي')} <span class="w gold" id="g24">برسالة</span></div>
+  <div class="t" id="cta" style="top:960px"><span class="btn">راسلني على واتساب</span></div>
+`, (T, r) => {
+  rise($$(r, '#h24 .w'), T, 42.66, .2); shine($(r, '#g24'), T, 44.0);
+  const c = k(T, 45.1, .5, ob); show($(r, '#cta'), clamp(c * 2), 0, (1 - c) * 60, lerp(.8, 1, c));
+  const pulse = 1 + Math.max(0, Math.sin((T - 45.7) * 5)) * .025 * (T > 45.7 ? 1 : 0); $(r, '#cta').firstElementChild.style.transform = `scale(${pulse})`;
+});
+
+// ===== 12. واجهة… تليق بمحلّك =====
+scene(46.54, 48.70, 'flash', `
+  <div class="arch" id="lg" style="left:375px;top:480px;width:330px;height:430px;border-width:5px;display:flex;align-items:center;justify-content:center;padding-bottom:20px">
+    <span class="gold" id="lgl" style="font:700 230px M">و</span></div>
+  <div class="t" id="w1" style="top:970px;font-size:140px"><span class="gold" id="w1g">واجهة…</span></div>
+  <div class="t" id="w2" style="top:1170px;font-size:92px">${words('تليق')} <span class="w gold" id="w2g">بمحلّك</span></div>
+`, (T, r) => {
+  const l = k(T, 46.54, .9, ob); show($(r, '#lg'), clamp(l * 2), 0, (1 - l) * 80, lerp(.75, 1, l));
+  $(r, '#lg').style.clipPath = `inset(${(1 - k(T, 46.54, .9, io)) * 100}% 0 0 0)`;
+  shine($(r, '#lgl'), T, 46.9, 1.1);
+  const a = k(T, 46.56, .5, ob); show($(r, '#w1'), clamp(a * 2), 0, (1 - a) * 40, lerp(.9, 1, a)); shine($(r, '#w1g'), T, 46.8, .9);
+  rise($$(r, '#w2 .w'), T, 47.39, .2); shine($(r, '#w2g'), T, 47.8, .8);
+});
+
+// ===== 13. واتساب: 0774 780 0611 (الخاتمة) =====
+scene(48.70, 99, 'zoom', `
+  <div class="arch" style="left:200px;top:300px;width:680px;height:1260px;border-width:3px;opacity:.55"></div>
+  <div class="t" id="wl" style="top:400px"><span class="pill">واتساب</span></div>
+  <div class="abs" id="numrow" style="left:60px;right:60px;top:520px;display:flex;justify-content:center;gap:34px;direction:ltr">
+    ${['0774', '780', '0611'].map(g => `<span class="ng" style="font:700 118px P;letter-spacing:2px;color:var(--ink)">${g}</span>`).join('')}
+  </div>
+  <div class="abs" id="qrw" style="left:395px;top:760px;width:290px;height:290px;padding:30px;border-radius:30px;background:#f6ecd8;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <img src="cap/qr-wa.svg" style="width:100%;height:100%;display:block"></div>
+  <div class="t sub" id="scan" style="top:1080px;font-size:38px">امسح الرمز لتفتح المحادثة</div>
+  <div class="t" id="brand" style="top:1180px;font-size:76px"><span class="gold" id="bg13">واجهة</span> <span style="font:600 50px P;color:var(--gold)">✦</span> <span style="font:700 60px M;direction:ltr;display:inline-block">Wajha Studio</span></div>
+  <div class="t sub" id="who3" style="top:1300px;font-size:40px">عبدالله حمزه علي · الموصل</div>
+`, (T, r) => {
+  show($(r, '#wl'), k(T, 48.72, .4, ob), 0, (1 - k(T, 48.72, .4)) * 30);
+  // كل مجموعة من الرقم تضوي لحظة ما تنقرا
+  const at = [49.41, 51.0, 52.31];
+  $$(r, '.ng').forEach((g, i) => {
+    const p = k(T, at[i], .45, ob), on = T >= at[i];
+    show(g, .22 + .78 * clamp(p), 0, (1 - clamp(p)) * 24, lerp(.92, 1, clamp(p)));
+    g.style.color = on ? 'var(--gold2)' : 'var(--ink)';
+    g.style.textShadow = on ? '0 0 40px rgba(216,178,102,.45)' : 'none';
+  });
+  const q = k(T, 49.6, .6, ob); show($(r, '#qrw'), clamp(q * 2), 0, (1 - q) * 60, lerp(.85, 1, q));
+  show($(r, '#scan'), k(T, 50.2, .5), 0, 0);
+  const bq = k(T, 53.0, .6, ob); show($(r, '#brand'), clamp(bq * 2), 0, (1 - bq) * 30); shine($(r, '#bg13'), T, 53.3, 1.0);
+  show($(r, '#who3'), k(T, 53.4, .5), 0, 0);
+});
+
+// ===== الذرّات الذهبية =====
+const dust = document.getElementById('dust'); const D = [];
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+for (let i = 0; i < 90; i++) { const e = document.createElement('div'); e.className = 'dust'; const r = rnd() * 5 + 1.2; e.style.width = e.style.height = r + 'px';
+  dust.appendChild(e); D.push({ e, x: rnd() * 1080, y: rnd() * 1920, v: rnd() * 18 + 6, ph: rnd() * 6.28, o: rnd() * .6 + .15 }); }
+
+// ===== الانتقالات =====
+const DIN = .4;
+function tin(type, x) {
+  const e = oc(x);
+  if (type === 'whip') return { o: 1, s: 1, x: (1 - e) * -1080, y: 0, b: (1 - e) * 26 };
+  if (type === 'up') return { o: 1, s: 1, x: 0, y: (1 - e) * 1920, b: (1 - e) * 26 };
+  if (type === 'zoom') return { o: clamp(x * 2.5), s: lerp(1.35, 1, e), x: 0, y: 0, b: (1 - e) * 12 };
+  if (type === 'flash') return { o: clamp(x * 3), s: lerp(1.08, 1, e), x: 0, y: 0, b: (1 - e) * 6 };
+  return { o: 1, s: 1, x: 0, y: 0, b: 0 };
+}
+const LEAD = .32; // المحتوى يبدي شوية قبل الانتقال حتى ما تبين اللقطة فاضية
+window.setT = T => {
+  for (let i = 0; i < S.length; i++) {
+    const sc = S[i], next = S[i + 1];
+    const outing = next && next.tin === 'whip' && T >= next.a - .22 && T < next.a;
+    const vis = (T >= sc.a && T < sc.b) || outing;
+    sc.el.style.display = vis ? 'block' : 'none'; if (!vis) continue;
+    sc.update(T + (i ? LEAD : 0), sc.el);
+    let r = { o: 1, s: 1, x: 0, y: 0, b: 0 };
+    const lt = T - sc.a;
+    if (lt < DIN && i) r = tin(sc.tin, lt / DIN);
+    if (outing) { const x = (T - (next.a - .22)) / .22; r = { o: 1, s: 1, x: x * x * 1080, y: 0, b: x * 26 }; }
+    if (next && next.tin === 'up' && T >= next.a - .2 && T < next.a) { const x = (T - (next.a - .2)) / .2; r = { o: 1, s: 1, x: 0, y: -x * x * 1920, b: x * 26 }; }
+    if (next && next.tin === 'zoom' && T >= next.a - .2 && T < next.a) { const x = (T - (next.a - .2)) / .2; r = { o: 1 - x, s: lerp(1, 1.5, x * x), x: 0, y: 0, b: x * 12 }; }
+    if (next && next.tin === 'flash' && T >= next.a - .25 && T < next.a) { const x = (T - (next.a - .25)) / .25; r = { o: 1 - x, s: lerp(1, .96, x), x: 0, y: 0, b: x * 6 }; }
+    sc.el.style.opacity = r.o; sc.el.style.filter = r.b > .3 ? `blur(${r.b}px)` : 'none';
+    sc.el.style.transform = `translate(${r.x}px,${r.y}px) scale(${r.s})`;
+  }
+  // وميض ذهبي عند انتقالات 'flash'
+  let f = 0; for (const sc of S) if (sc.tin === 'flash' && sc.a > 0) f = Math.max(f, 1 - Math.abs(T - sc.a) / .3);
+  document.getElementById('flash').style.opacity = clamp(f);
+  for (const d of D) { const y = (d.y - T * d.v + 1920 * 10) % 1920, x = d.x + Math.sin(T * .6 + d.ph) * 14;
+    d.e.style.transform = `translate(${x}px,${y}px)`; d.e.style.opacity = d.o * (.6 + .4 * Math.sin(T * 1.7 + d.ph)); }
+  document.getElementById('bg').style.transform = `scale(1.25) translate(${Math.sin(T / 6) * 40}px, ${Math.cos(T / 7) * 30}px)`;
+  document.getElementById('fade').style.opacity = clamp((T - (window.DUR - .6)) / .6);
+};
+window.DUR = 55.4;
+setT(0);
+</script>
+</body>
+</html>
