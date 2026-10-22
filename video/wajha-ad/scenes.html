@@ -67,88 +67,90 @@ function scene(a, b, tin, html, update) {
   S.push({ a, b, tin, el, update });
 }
 
-// ===== 1. الهوك: محلّك جميل… لكن مَن يعلم؟ =====
-scene(0, 3.36, 'cut', `
+// الأوقات كلها من audio/timeline.json (صوت 2026-10-22). النص على الشاشة هو نفس الكلام المسموع.
+
+// ===== 1. الهوك: محلّك زين… بس منو يدري؟ =====
+scene(0, 3.31, 'cut', `
   <div class="arch" id="a1" style="left:190px;top:440px;width:700px;height:1000px"></div>
   <div class="arch" id="a2" style="left:232px;top:482px;width:616px;height:958px;border-width:2px;opacity:.45"></div>
-  <div class="t" id="h1" style="top:650px;font-size:160px;line-height:1.15">${words('محلّك')} <span class="w gold" id="g1">جميل</span></div>
-  <div class="t" id="h2" style="top:930px;font-size:100px;color:var(--muted);font-weight:500">${words('لكن… مَن يعلم؟')}</div>
-  <div class="line" id="ln1" style="left:300px;width:480px;top:1140px"></div>
+  <div class="t" id="h1" style="top:660px;font-size:138px;line-height:1.15">${words('محلّك')} <span class="w gold" id="g1">زين…</span></div>
+  <div class="t" id="h2" style="top:930px;font-size:96px;color:var(--muted);font-weight:500">${words('بس… منو يدري؟')}</div>
+  <div class="line" id="ln1" style="left:300px;width:480px;top:1150px"></div>
 `, (T, r) => {
-  // القوس ينرسم من تحت لفوق
-  const a = k(T, 0, 1.1, io); $(r, '#a1').style.clipPath = `inset(${(1 - a) * 100}% 0 0 0)`; $(r, '#a2').style.clipPath = `inset(${(1 - k(T, .2, 1.1, io)) * 100}% 0 0 0)`;
-  rise($$(r, '#h1 .w'), T, .38, .25, .55); shine($(r, '#g1'), T, .9, 1.0);
-  rise($$(r, '#h2 .w'), T, 1.78, .18, .45);
+  const a = k(T, 0, 1.0, io); $(r, '#a1').style.clipPath = `inset(${(1 - a) * 100}% 0 0 0)`; $(r, '#a2').style.clipPath = `inset(${(1 - k(T, .15, 1.0, io)) * 100}% 0 0 0)`;
+  rise($$(r, '#h1 .w'), T, .05, .3, .5); shine($(r, '#g1'), T, .55, 1.0);
+  rise($$(r, '#h2 .w'), T, 1.35, .42, .45);
   $(r, '#ln1').style.transform = `scaleX(${k(T, 2.2, .6, io)})`;
 });
 
-// ===== 2. زبونك لا يمرّ من الشارع… بل من شاشة هاتفه =====
-scene(3.36, 8.20, 'whip', `
-  <div class="t" id="h3" style="top:250px;font-size:80px;line-height:1.3">${words('زبونك اليوم لا يمرّ')}<br>${words('من الشارع…')}</div>
-  <div class="t" id="h4" style="top:270px;font-size:88px;line-height:1.3">${words('بل من')} <span class="w gold" id="g4">شاشة هاتفه</span></div>
+// ===== 2. زبونك اليوم ما يمرّ من الشارع… يمرّ من شاشة موبايله =====
+scene(3.31, 7.71, 'whip', `
+  <div class="t" id="h3" style="top:250px;font-size:80px;line-height:1.3">${words('زبونك اليوم ما يمرّ')}<br>${words('من الشارع…')}</div>
+  <div class="t" id="h4" style="top:270px;font-size:88px;line-height:1.3">${words('يمرّ من')} <span class="w gold" id="g4">شاشة موبايله</span></div>
   <div class="arch" style="left:150px;top:620px;width:780px;height:1300px;border-width:3px;opacity:.6"></div>
   <div id="ph2" style="position:absolute;left:330px;top:700px">${phone('wajha-site.jpg')}</div>
 `, (T, r) => {
-  rise($$(r, '#h3 .w'), T, 3.4, .12); fadeOut($(r, '#h3'), T, 6.0);
-  rise($$(r, '#h4 .w'), T, 6.15, .15); shine($(r, '#g4'), T, 6.6);
-  const p = k(T, 3.5, 1.0, ob), z = k(T, 6.15, 1.2, io);
+  rise($$(r, '#h3 .w'), T, 3.33, .22); fadeOut($(r, '#h3'), T, 5.7);
+  rise($$(r, '#h4 .w'), T, 5.98, .2); shine($(r, '#g4'), T, 6.5);
+  const p = k(T, 3.4, 1.0, ob), z = k(T, 5.98, 1.2, io);
   const ph = $(r, '#ph2'); show(ph, clamp(p * 2), 0, (1 - p) * 700 - z * 60, lerp(1, 1.22, z));
-  scroll(ph, lerp(0, 380, k(T, 4.6, 3.2, io)));
+  scroll(ph, lerp(0, 380, k(T, 4.4, 3.0, io)));
 });
 
-// ===== 3. وأوّل ما يراه منك… يجب أن يليق بك =====
-scene(8.20, 12.01, 'zoom', `
-  <div class="t" id="h5" style="top:250px;font-size:84px">${words('وأوّل ما يراه منك…')}</div>
-  <div class="t" id="h6" style="top:370px;font-size:118px"><span class="w">يجب</span> <span class="w">أن</span> <span class="w gold" id="g6">يليق بك</span></div>
+// ===== 3. وأول شي يشوفه منك… لازم يليق بيك =====
+scene(7.71, 11.14, 'zoom', `
+  <div class="t" id="h5" style="top:250px;font-size:84px">${words('وأول شي يشوفه منك…')}</div>
+  <div class="t" id="h6" style="top:370px;font-size:122px"><span class="w">لازم</span> <span class="w gold" id="g6">يليق بيك</span></div>
   <div id="ph3a" style="position:absolute;left:60px;top:820px;transform-origin:50% 0">${phone('wajha-site.jpg')}</div>
-  <div id="ph3b" style="position:absolute;left:600px;top:820px">${phone('4u-tables.jpg')}</div>
+  <div id="ph3b" style="position:absolute;left:600px;top:820px">${phone('dijla-cart.jpg')}</div>
 `, (T, r) => {
-  rise($$(r, '#h5 .w'), T, 8.2, .1);
-  rise($$(r, '#h6 .w'), T, 10.1, .14, .5); shine($(r, '#g6'), T, 10.7);
-  const a = k(T, 8.3, .8, ob), b = k(T, 8.55, .8, ob);
+  rise($$(r, '#h5 .w'), T, 7.72, .2);
+  rise($$(r, '#h6 .w'), T, 9.5, .25, .5); shine($(r, '#g6'), T, 9.95);
+  const a = k(T, 7.8, .8, ob), b = k(T, 8.05, .8, ob);
   show($(r, '#ph3a'), clamp(a * 2), (1 - a) * 300, 0, .92, `rotate(${lerp(-10, -4, a)}deg)`);
   show($(r, '#ph3b'), clamp(b * 2), (1 - b) * -300, 60, .92, `rotate(${lerp(10, 4, b)}deg)`);
 });
 
-// ===== 4. أنا عبدالله، وواجهة عملها واحد =====
-scene(12.01, 18.23, 'flash', `
+// ===== 4. أني عبدالله من الموصل، وواجهة شغلتها وحدة =====
+scene(11.14, 17.72, 'flash', `
   <div class="arch" id="logo" style="left:375px;top:470px;width:330px;height:430px;border-width:5px;display:flex;align-items:center;justify-content:center;padding-bottom:20px">
     <span class="gold" id="gl" style="font:700 230px M">و</span></div>
-  <div class="t sub" id="who" style="top:960px;font-size:44px">${words('أنا عبدالله · الموصل')}</div>
+  <div class="t sub" id="who" style="top:960px;font-size:46px">${words('أني عبدالله · من الموصل')}</div>
   <div class="t" id="nm" style="top:1050px;font-size:130px"><span class="w gold" id="gn">واجهة</span></div>
   <div class="t sub" id="en" style="top:1230px;font-size:44px;direction:ltr">Wajha Studio</div>
-  <div class="t" id="h9" style="top:1350px;font-size:76px;line-height:1.35">${words('أن يظهر محلّك')}<br><span class="w gold" id="g9">كما يستحق</span></div>
+  <div class="t" id="h9" style="top:1340px;font-size:74px;line-height:1.35">${words('تجعل محلّك يبيّن')}<br><span class="w gold" id="g9">مثل ما يستاهل</span></div>
 `, (T, r) => {
-  const l = k(T, 12.01, .9, ob); show($(r, '#logo'), clamp(l * 2), 0, (1 - l) * 80, lerp(.7, 1, l));
-  $(r, '#logo').style.clipPath = `inset(${(1 - k(T, 12.01, .9, io)) * 100}% 0 0 0)`;
-  shine($(r, '#gl'), T, 12.35, 1.1);
-  rise($$(r, '#who .w'), T, 12.3, .12);
-  rise($$(r, '#nm .w'), T, 13.37, .1, .6); shine($(r, '#gn'), T, 13.9, 1.0);
-  show($(r, '#en'), k(T, 13.8, .5), 0, 0);
-  rise($$(r, '#h9 .w'), T, 15.52, .14); shine($(r, '#g9'), T, 16.3);
+  const l = k(T, 11.14, .9, ob); show($(r, '#logo'), clamp(l * 2), 0, (1 - l) * 80, lerp(.7, 1, l));
+  $(r, '#logo').style.clipPath = `inset(${(1 - k(T, 11.14, .9, io)) * 100}% 0 0 0)`;
+  shine($(r, '#gl'), T, 11.5, 1.1);
+  rise($$(r, '#who .w'), T, 11.2, .14);
+  rise($$(r, '#nm .w'), T, 13.03, .1, .6); shine($(r, '#gn'), T, 13.5, 1.0);
+  show($(r, '#en'), k(T, 13.5, .5), 0, 0);
+  rise($$(r, '#h9 .w'), T, 14.86, .2); shine($(r, '#g9'), T, 16.2);
 });
 
-// ===== 5. منيو رقمي لمطعمك… يُفتح من رمز على الطاولة =====
-scene(18.23, 22.43, 'whip', `
-  <div class="t" style="top:230px"><span class="pill" id="p10">منيو رقمي لمطعمك</span></div>
-  <div class="t" id="h10" style="top:330px;font-size:84px;line-height:1.25">${words('منيو')} <span class="w gold" id="g10">رقمي</span> ${words('لمطعمك')}</div>
-  <div class="t" id="h11" style="top:300px;font-size:88px;line-height:1.25">${words('يُفتح من رمز')}<br>${words('على')} <span class="w gold">الطاولة</span></div>
+// ===== 5. منيو رقمي لمطعمك… يفتح من رمز QR على الطاولة =====
+scene(17.72, 21.57, 'whip', `
+  <div class="t" id="h10" style="top:290px;font-size:88px;line-height:1.25">${words('منيو')} <span class="w gold" id="g10">رقمي</span> ${words('لمطعمك…')}</div>
+  <div class="t" id="h11" style="top:250px;font-size:84px;line-height:1.3">${words('يفتح من رمز')} <span class="w" style="direction:ltr;font-family:P">QR</span><br>${words('على')} <span class="w gold" id="g11">الطاولة</span></div>
   <div class="arch" style="left:90px;top:640px;width:900px;height:1300px;border-width:3px;opacity:.65"></div>
-  <div id="pc" style="position:absolute;left:330px;top:760px;z-index:2">${phone('4u-tables.jpg')}</div>
-  <div id="qr" style="position:absolute;left:740px;top:600px;width:230px;height:230px;padding:18px;border-radius:28px;background:#f6ecd8;box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:3">
-    <img src="cap/qr-4u.svg" style="width:100%;height:100%"></div>
+  <div id="pc" style="position:absolute;left:330px;top:760px;z-index:2">${phone('dijla-menu.jpg')}</div>
+  <div id="qr" style="position:absolute;left:680px;top:600px;width:240px;height:240px;padding:24px;border-radius:28px;background:#f6ecd8;box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:3">
+    <img src="cap/qr-dijla.svg" style="width:100%;height:100%;display:block"></div>
+  <div class="t sub" id="cap5" style="top:1640px;font-size:36px;z-index:4">نموذج عرض: منيو مطعم دجلة · الأسعار تجريبية</div>
 `, (T, r) => {
-  show($(r, '#p10'), k(T, 18.3, .4), 0, 0); fadeOut($(r, '#p10').parentElement, T, 19.8);
-  rise($$(r, '#h10 .w'), T, 18.25, .12); shine($(r, '#g10'), T, 18.8); fadeOut($(r, '#h10'), T, 19.85);
-  rise($$(r, '#h11 .w'), T, 19.96, .1);
-  const c = k(T, 18.3, .9, ob); show($(r, '#pc'), clamp(c * 2), 0, (1 - c) * 600);
-  // الهاتف يقترب ببطء بدل التمرير: شاشة اختيار الطاولة في نموذج فور يو (بلا أسعار)
-  const zc = k(T, 19.2, 3.0, io); $(r, '#pc').style.transform += ` scale(${lerp(1, 1.08, zc)})`;
-  const qr = k(T, 19.96, .6, ob); show($(r, '#qr'), clamp(qr * 2), 0, (1 - qr) * 60, Math.max(0, qr), `rotate(${lerp(-12, 6, qr)}deg)`);
+  rise($$(r, '#h10 .w'), T, 17.74, .22); shine($(r, '#g10'), T, 18.3); fadeOut($(r, '#h10'), T, 18.95);
+  rise($$(r, '#h11 .w'), T, 19.25, .16);
+  shine($(r, '#g11'), T, 20.4);
+  const c = k(T, 17.8, .9, ob); show($(r, '#pc'), clamp(c * 2), 0, (1 - c) * 600);
+  // يتمرّر المنيو ببطء على أطباق دجلة
+  scroll($(r, '#pc'), lerp(0, 420, k(T, 18.6, 2.9, io)));
+  const qr = k(T, 19.3, .6, ob); show($(r, '#qr'), clamp(qr * 2), 0, (1 - qr) * 60, Math.max(0, qr), `rotate(${lerp(-12, 5, qr)}deg)`);
+  show($(r, '#cap5'), k(T, 18.4, .5), 0, 0);
 });
 
 // ===== 6. موقع لعيادتك، لمحلّك، لمكتبك الهندسي =====
-scene(22.43, 26.70, 'whip', `
+scene(21.57, 25.07, 'whip', `
   <div class="t" id="h12" style="top:240px;font-size:100px">${words('موقع')}</div>
   <div class="abs" style="left:80px;right:80px;top:390px;height:150px">
     ${['لعيادتك', 'لمحلّك', 'لمكتبك الهندسي'].map(w => `<div class="t gold lw" style="left:0;right:0;top:0;font-size:92px">${w}</div>`).join('')}
@@ -156,21 +158,21 @@ scene(22.43, 26.70, 'whip', `
   <div class="arch" style="left:150px;top:640px;width:780px;height:1300px;border-width:3px;opacity:.6"></div>
   <div id="ph6" style="position:absolute;left:330px;top:720px">${phone('wajha-site.jpg')}</div>
 `, (T, r) => {
-  rise($$(r, '#h12 .w'), T, 22.45);
-  const at = [22.9, 24.0, 24.95];
+  rise($$(r, '#h12 .w'), T, 21.58);
+  const at = [22.0, 22.86, 23.7];
   $$(r, '.lw').forEach((w, i) => {
-    const p = k(T, at[i], .4, ob), o = i < 2 ? k(T, at[i + 1] - .1, .2, x => clamp(x)) : 0;
+    const p = k(T, at[i], .35, ob), o = i < 2 ? k(T, at[i + 1] - .1, .2, x => clamp(x)) : 0;
     show(w, clamp(p * 2) * (1 - o), 0, (1 - p) * 60 - o * 50); shine(w, T, at[i] + .2, .7);
   });
-  const p = k(T, 22.5, .8, ob); show($(r, '#ph6'), clamp(p * 2), 0, (1 - p) * 500);
-  // يتمرّر على أقسام الموقع: الخدمات ثم الأعمال
-  scroll($(r, '#ph6'), lerp(0, 3400, k(T, 22.9, 3.8, io)));
+  const p = k(T, 21.6, .8, ob); show($(r, '#ph6'), clamp(p * 2), 0, (1 - p) * 500);
+  // يتمرّر على موقع واجهة الحقيقي: الأعمال وروابط المنيوهات حتى بطاقة فور يو
+  scroll($(r, '#ph6'), lerp(0, 2280, k(T, 21.9, 3.1, io)));
 });
 
-// ===== 7. وفيديو ترويجي لحساباتك… مثل الذي تشاهده الآن =====
-scene(26.70, 31.52, 'zoom', `
-  <div class="t" id="h13" style="top:240px;font-size:92px;line-height:1.3">${words('وفيديو')} <span class="w gold">ترويجي</span><br>${words('لحساباتك')}</div>
-  <div class="t" id="h14" style="top:240px;font-size:96px;line-height:1.3">${words('مثل الذي')}<br><span class="w gold" id="g14">تشاهده الآن</span></div>
+// ===== 7. وفيديو ترويجي لحساباتك… مثل هذا اللي تشوفه هسه =====
+scene(25.07, 28.52, 'zoom', `
+  <div class="t" id="h13" style="top:240px;font-size:92px;line-height:1.3">${words('وفيديو')} <span class="w gold">ترويجي</span><br>${words('لحساباتك…')}</div>
+  <div class="t" id="h14" style="top:240px;font-size:96px;line-height:1.3">${words('مثل هذا')}<br><span class="w gold" id="g14">اللي تشوفه هسه</span></div>
   <div id="ph7" style="position:absolute;left:330px;top:700px;transform-origin:50% 40%">
     <div class="phone"><div class="scr" style="background:#2a0b13">      <img src="cap/hook-frame.jpg" style="height:100%;object-fit:cover">
       <div style="position:absolute;right:22px;bottom:150px;display:flex;flex-direction:column;gap:34px;align-items:center;font:600 22px P;color:#fff">
@@ -178,51 +180,55 @@ scene(26.70, 31.52, 'zoom', `
       <div style="position:absolute;left:0;right:0;bottom:0;height:8px;background:rgba(255,255,255,.25)"><div id="prog" style="height:100%;background:var(--gold);width:0"></div></div>
     </div></div></div>
 `, (T, r) => {
-  rise($$(r, '#h13 .w'), T, 26.72, .12); fadeOut($(r, '#h13'), T, 29.0);
-  rise($$(r, '#h14 .w'), T, 29.16, .12); shine($(r, '#g14'), T, 29.8);
-  const p = k(T, 26.75, .9, ob), z = k(T, 29.16, 1.4, io);
+  rise($$(r, '#h13 .w'), T, 25.08, .18); fadeOut($(r, '#h13'), T, 26.7);
+  rise($$(r, '#h14 .w'), T, 26.94, .16); shine($(r, '#g14'), T, 27.5);
+  const p = k(T, 25.1, .9, ob), z = k(T, 26.94, 1.3, io);
   // الموبايل يصغر ويبين إنه نفس الإعلان
   show($(r, '#ph7'), clamp(p * 2), 0, (1 - p) * 500 + z * 40, lerp(1.2, .95, z) , `rotate(${lerp(0, -3, z)}deg)`);
-  $(r, '#prog').style.width = `${clamp((T - 26.7) / 4.8) * 100}%`;
+  $(r, '#prog').style.width = `${clamp((T - 25.07) / 3.45) * 100}%`;
 });
 
-// ===== 8. ليس قالباً واحداً للجميع… ألوانك، شعارك، هويتك =====
-scene(31.52, 36.78, 'whip', `
-  <div class="t" id="h15" style="top:240px;font-size:88px;line-height:1.3">${words('ليس قالباً واحداً')}<br>${words('للجميع')}</div>
-  <div class="abs" id="ids" style="left:60px;right:60px;top:300px;display:flex;justify-content:center;gap:46px">
-    ${['ألوانك', 'شعارك', 'هويتك'].map(w => `<div class="t gold iw" style="position:relative;left:0;right:0;font-size:78px">${w}</div>`).join('')}
+// ===== 8. مو قالب ينطي للكل… ألوانك، شعارك، هويتك إنت =====
+scene(28.52, 33.03, 'whip', `
+  <div class="t" id="h15" style="top:240px;font-size:92px;line-height:1.3">${words('مو قالب')}<br>${words('ينطي للكل…')}</div>
+  <div class="abs" id="ids" style="left:60px;right:60px;top:300px;display:flex;justify-content:center;gap:28px">
+    ${['ألوانك', 'شعارك', 'هويتك إنت'].map(w => `<div class="t gold iw" style="position:relative;left:0;right:0;font-size:62px;white-space:nowrap">${w}</div>`).join('')}
   </div>
-  <div id="pa" style="position:absolute;left:90px;top:640px">${phone('4u-tables.jpg')}</div>
-  <div id="pb" style="position:absolute;left:570px;top:640px">${phone('wajha-site.jpg')}</div>
-  <div class="t sub" id="cap8" style="top:1560px;font-size:38px">منيو تجريبي وموقع واجهة · هويتان مختلفتان</div>
+  <div id="pa" style="position:absolute;left:-10px;top:660px;z-index:1">${phone('dijla-cart.jpg')}</div>
+  <div id="pb" style="position:absolute;left:330px;top:620px;z-index:2">${phone('4u-tables.jpg')}</div>
+  <div id="pd" style="position:absolute;left:670px;top:660px;z-index:1">${phone('wajha-site.jpg')}</div>
+  <div class="t sub" id="cap8" style="top:1580px;font-size:36px">نماذج عرض: منيو دجلة · منيو فور يو · موقع واجهة</div>
 `, (T, r) => {
-  rise($$(r, '#h15 .w'), T, 31.54, .1); fadeOut($(r, '#h15'), T, 33.8);
-  const at = [34.0, 34.8, 35.6];
-  $$(r, '.iw').forEach((w, i) => { const p = k(T, at[i], .45, ob); show(w, clamp(p * 2), 0, (1 - p) * 50, lerp(.8, 1, p)); shine(w, T, at[i] + .2, .7); });
-  const a = k(T, 31.6, .9, ob), b = k(T, 31.85, .9, ob);
-  show($(r, '#pa'), clamp(a * 2), (1 - a) * 400, 0, .94, `rotate(${lerp(-12, -3, a)}deg)`);
-  show($(r, '#pb'), clamp(b * 2), (1 - b) * -400, 30, .94, `rotate(${lerp(12, 3, b)}deg)`);
-  show($(r, '#cap8'), k(T, 32.5, .5), 0, 0);
+  rise($$(r, '#h15 .w'), T, 28.54, .2); fadeOut($(r, '#h15'), T, 29.95);
+  const at = [30.17, 30.96, 31.77];
+  $$(r, '.iw').forEach((w, i) => { const p = k(T, at[i], .4, ob); show(w, clamp(p * 2), 0, (1 - p) * 50, lerp(.8, 1, p)); shine(w, T, at[i] + .2, .7); });
+  // كل هوية تطلع ويه كلمتها: دجلة، فور يو، واجهة
+  const ph = [['#pa', -9, 360], ['#pb', 0, 0], ['#pd', 9, -360]];
+  ph.forEach(([id, rot, dx], i) => {
+    const p = k(T, i === 1 ? 28.6 : at[i] - .15, .7, ob);
+    show($(r, id), clamp(p * 2), (1 - p) * dx, (1 - p) * 240, i === 1 ? .86 : .8, `rotate(${lerp(rot * 2, rot, p)}deg)`);
+  });
+  show($(r, '#cap8'), k(T, 30.0, .5), 0, 0);
 });
 
-// ===== 9. للهاتف أولاً، بالعربية من الأساس، بلا تطبيق ولا تسجيل =====
-scene(36.78, 42.50, 'up', `
+// ===== 9. للموبايل أولاً، بالعربي من الأساس، بلا تطبيق ولا تسجيل =====
+scene(33.03, 37.79, 'up', `
   <div class="arch" style="left:140px;top:380px;width:800px;height:1300px;border-width:3px;opacity:.5"></div>
-  ${[['للهاتف', 'أولاً', 36.78], ['بالعربية', 'من الأساس', 38.22], ['بلا تطبيق', 'ولا تسجيل', 40.10]].map(([a, b, t], i) => `
-    <div class="t fr" data-t="${t}" style="top:${560 + i * 330}px;font-size:86px;line-height:1.15">${a} <span class="gold">${b}</span></div>
+  ${[['للموبايل', 'أولاً', 33.03], ['بالعربي', 'من الأساس', 34.33], ['بلا تطبيق', 'ولا تسجيل', 35.69]].map(([a, b, t], i) => `
+    <div class="t fr" data-t="${t}" style="top:${560 + i * 330}px;font-size:74px;line-height:1.15;white-space:nowrap;left:40px;right:40px">${a} <span class="gold">${b}</span></div>
     <div class="line fl" data-t="${t}" style="left:340px;width:400px;top:${745 + i * 330}px"></div>`).join('')}
 `, (T, r) => {
   $$(r, '.fr').forEach(e => { const p = k(T, +e.dataset.t, .5, ob); show(e, clamp(p * 2), 0, (1 - p) * 60, lerp(.85, 1, p)); e.style.filter = p < 1 ? `blur(${(1 - p) * 10}px)` : 'none'; shine($(e, '.gold'), T, +e.dataset.t + .25, .7); });
   $$(r, '.fl').forEach(e => { e.style.transform = `scaleX(${k(T, +e.dataset.t + .3, .5, io)})`; });
 });
 
-// ===== 10. ترسل المحتوى… أبني… تراجع… وتستلم الرابط =====
-scene(42.50, 47.29, 'whip', `
-  <div class="t" style="top:240px;font-size:84px">طريقة <span class="gold">العمل</span></div>
-  ${[['١', 'ترسل المحتوى', 42.5], ['٢', 'أبني', 43.8], ['٣', 'تراجع', 44.26], ['٤', 'تستلم الرابط جاهزاً', 44.94]].map(([n, l, t], i) => `
-    <div class="abs st" data-t="${t}" style="left:130px;right:130px;top:${480 + i * 270}px;height:220px;display:flex;align-items:center;gap:44px;padding:0 50px;border:2px solid rgba(216,178,102,.35);border-radius:110px 110px 28px 28px;background:rgba(58,18,32,.55)">
-      <div class="num" style="width:120px;height:120px;border-radius:60px 60px 14px 14px;border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 72px M;color:var(--gold)">${n}</div>
-      <div style="font:700 76px M">${l}</div></div>`).join('')}
+// ===== 10. تدزلي المحتوى… أني أبني… إنت تراجع… وتستلم الرابط جاهز =====
+scene(37.79, 42.64, 'whip', `
+  <div class="t" style="top:240px;font-size:84px">طريقة <span class="gold">الشغل</span></div>
+  ${[['١', 'تدزلي المحتوى', 37.79], ['٢', 'أني أبني', 39.04], ['٣', 'إنت تراجع', 39.99], ['٤', 'تستلم الرابط جاهز', 40.92]].map(([n, l, t], i) => `
+    <div class="abs st" data-t="${t}" style="left:110px;right:110px;top:${480 + i * 270}px;height:220px;display:flex;align-items:center;gap:40px;padding:0 46px;border:2px solid rgba(216,178,102,.35);border-radius:110px 110px 28px 28px;background:rgba(58,18,32,.55)">
+      <div class="num" style="flex:none;width:120px;height:120px;border-radius:60px 60px 14px 14px;border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 72px M;color:var(--gold)">${n}</div>
+      <div style="font:700 72px M;white-space:nowrap">${l}</div></div>`).join('')}
 `, (T, r) => {
   $$(r, '.st').forEach(e => {
     const t = +e.dataset.t, p = k(T, t - .15, .45, ob); show(e, clamp(p * 2) * (T > t ? 1 : .35), (1 - p) * -300, 0);
@@ -232,34 +238,56 @@ scene(42.50, 47.29, 'whip', `
   });
 });
 
-// ===== 11. واجهتك الرقمية تبدأ برسالة. راسلني على واتساب =====
-scene(47.29, 52.04, 'zoom', `
-  <div class="t" id="h24" style="top:420px;font-size:96px;line-height:1.25">${words('واجهتك الرقمية')}<br>${words('تبدأ')} <span class="w gold" id="g24">برسالة</span></div>
-  <div class="t" id="cta" style="top:900px"><span class="btn">راسلني على واتساب</span></div>
-  <div class="t" id="num" style="top:1080px;font:600 66px P;direction:ltr">+964 774 780 0611</div>
-  <div class="t sub" id="who2" style="top:1200px;font-size:40px">عبدالله حمزه علي · الموصل</div>
+// ===== 11. واجهتك الرقمية تبدي برسالة. راسلني على واتساب =====
+scene(42.64, 46.54, 'zoom', `
+  <div class="t" id="h24" style="top:470px;font-size:100px;line-height:1.25">${words('واجهتك الرقمية')}<br>${words('تبدي')} <span class="w gold" id="g24">برسالة</span></div>
+  <div class="t" id="cta" style="top:960px"><span class="btn">راسلني على واتساب</span></div>
 `, (T, r) => {
-  rise($$(r, '#h24 .w'), T, 47.3, .12); shine($(r, '#g24'), T, 48.6);
-  const c = k(T, 49.93, .55, ob); show($(r, '#cta'), clamp(c * 2), 0, (1 - c) * 60, lerp(.8, 1, c));
-  const pulse = 1 + Math.max(0, Math.sin((T - 50.6) * 5)) * .025 * (T > 50.6 ? 1 : 0); $(r, '#cta').firstElementChild.style.transform = `scale(${pulse})`;
-  show($(r, '#num'), k(T, 50.3, .5), 0, (1 - k(T, 50.3, .5)) * 30);
-  show($(r, '#who2'), k(T, 50.7, .5), 0, 0);
+  rise($$(r, '#h24 .w'), T, 42.66, .2); shine($(r, '#g24'), T, 44.0);
+  const c = k(T, 45.1, .5, ob); show($(r, '#cta'), clamp(c * 2), 0, (1 - c) * 60, lerp(.8, 1, c));
+  const pulse = 1 + Math.max(0, Math.sin((T - 45.7) * 5)) * .025 * (T > 45.7 ? 1 : 0); $(r, '#cta').firstElementChild.style.transform = `scale(${pulse})`;
 });
 
 // ===== 12. واجهة… تليق بمحلّك =====
-scene(52.04, 99, 'flash', `
-  <div class="arch" id="lg" style="left:375px;top:500px;width:330px;height:430px;border-width:5px;display:flex;align-items:center;justify-content:center;padding-bottom:20px">
+scene(46.54, 48.70, 'flash', `
+  <div class="arch" id="lg" style="left:375px;top:480px;width:330px;height:430px;border-width:5px;display:flex;align-items:center;justify-content:center;padding-bottom:20px">
     <span class="gold" id="lgl" style="font:700 230px M">و</span></div>
-  <div class="t" id="w1" style="top:990px;font-size:140px"><span class="gold" id="w1g">واجهة</span></div>
-  <div class="t" id="w2" style="top:1190px;font-size:90px">${words('تليق')} <span class="w gold" id="w2g">بمحلّك</span></div>
-  <div class="t sub" id="w3" style="top:1370px;font-size:40px;direction:ltr">Wajha Studio · +964 774 780 0611</div>
+  <div class="t" id="w1" style="top:970px;font-size:140px"><span class="gold" id="w1g">واجهة…</span></div>
+  <div class="t" id="w2" style="top:1170px;font-size:92px">${words('تليق')} <span class="w gold" id="w2g">بمحلّك</span></div>
 `, (T, r) => {
-  const l = k(T, 52.04, 1.0, ob); show($(r, '#lg'), clamp(l * 2), 0, (1 - l) * 80, lerp(.75, 1, l));
-  $(r, '#lg').style.clipPath = `inset(${(1 - k(T, 52.04, 1.0, io)) * 100}% 0 0 0)`;
-  shine($(r, '#lgl'), T, 52.6, 1.2);
-  const a = k(T, 52.04, .6, ob); show($(r, '#w1'), clamp(a * 2), 0, (1 - a) * 40, lerp(.9, 1, a)); shine($(r, '#w1g'), T, 52.4, 1.0);
-  rise($$(r, '#w2 .w'), T, 52.64, .18); shine($(r, '#w2g'), T, 53.2, .9);
-  show($(r, '#w3'), k(T, 53.4, .6), 0, 0);
+  const l = k(T, 46.54, .9, ob); show($(r, '#lg'), clamp(l * 2), 0, (1 - l) * 80, lerp(.75, 1, l));
+  $(r, '#lg').style.clipPath = `inset(${(1 - k(T, 46.54, .9, io)) * 100}% 0 0 0)`;
+  shine($(r, '#lgl'), T, 46.9, 1.1);
+  const a = k(T, 46.56, .5, ob); show($(r, '#w1'), clamp(a * 2), 0, (1 - a) * 40, lerp(.9, 1, a)); shine($(r, '#w1g'), T, 46.8, .9);
+  rise($$(r, '#w2 .w'), T, 47.39, .2); shine($(r, '#w2g'), T, 47.8, .8);
+});
+
+// ===== 13. واتساب: 0774 780 0611 (الخاتمة) =====
+scene(48.70, 99, 'zoom', `
+  <div class="arch" style="left:200px;top:300px;width:680px;height:1260px;border-width:3px;opacity:.55"></div>
+  <div class="t" id="wl" style="top:400px"><span class="pill">واتساب</span></div>
+  <div class="abs" id="numrow" style="left:60px;right:60px;top:520px;display:flex;justify-content:center;gap:24px;direction:ltr">
+    ${['0774', '780', '0611'].map(g => `<span class="ng" style="font:700 96px P;color:var(--ink)">${g}</span>`).join('')}
+  </div>
+  <div class="abs" id="qrw" style="left:395px;top:760px;width:290px;height:290px;padding:30px;border-radius:30px;background:#f6ecd8;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <img src="cap/qr-wa.svg" style="width:100%;height:100%;display:block"></div>
+  <div class="t sub" id="scan" style="top:1080px;font-size:38px">امسح الرمز لتفتح المحادثة</div>
+  <div class="t" id="brand" style="top:1180px;font-size:76px"><span class="gold" id="bg13">واجهة</span> <span style="font:600 50px P;color:var(--gold)">✦</span> <span style="font:700 60px M;direction:ltr;display:inline-block">Wajha Studio</span></div>
+  <div class="t sub" id="who3" style="top:1300px;font-size:40px">عبدالله حمزه علي · الموصل</div>
+`, (T, r) => {
+  show($(r, '#wl'), k(T, 48.72, .4, ob), 0, (1 - k(T, 48.72, .4)) * 30);
+  // كل مجموعة من الرقم تضوي لحظة ما تنقرا
+  const at = [49.41, 51.0, 52.31];
+  $$(r, '.ng').forEach((g, i) => {
+    const p = k(T, at[i], .45, ob), on = T >= at[i];
+    show(g, .22 + .78 * clamp(p), 0, (1 - clamp(p)) * 24, lerp(.92, 1, clamp(p)));
+    g.style.color = on ? 'var(--gold2)' : 'var(--ink)';
+    g.style.textShadow = on ? '0 0 40px rgba(216,178,102,.45)' : 'none';
+  });
+  const q = k(T, 49.6, .6, ob); show($(r, '#qrw'), clamp(q * 2), 0, (1 - q) * 60, lerp(.85, 1, q));
+  show($(r, '#scan'), k(T, 50.2, .5), 0, 0);
+  const bq = k(T, 53.0, .6, ob); show($(r, '#brand'), clamp(bq * 2), 0, (1 - bq) * 30); shine($(r, '#bg13'), T, 53.3, 1.0);
+  show($(r, '#who3'), k(T, 53.4, .5), 0, 0);
 });
 
 // ===== الذرّات الذهبية =====
@@ -304,7 +332,7 @@ window.setT = T => {
   document.getElementById('bg').style.transform = `scale(1.25) translate(${Math.sin(T / 6) * 40}px, ${Math.cos(T / 7) * 30}px)`;
   document.getElementById('fade').style.opacity = clamp((T - (window.DUR - .6)) / .6);
 };
-window.DUR = 55.42;
+window.DUR = 55.4;
 setT(0);
 </script>
 </body>
